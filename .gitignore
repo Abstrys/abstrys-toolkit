@@ -1,4 +1,9 @@
 *.py[cod]
+legacy/
+dist/
+build/
+aws-config.txt
+MANIFEST
 
 # C extensions
 *.so
