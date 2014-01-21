@@ -3,8 +3,15 @@ import sys
 import os
 
 def confirm(query):
+    """Confirm user input."""
     answer = raw_input("%s (y/n): " % (query))
     return answer.lower() == 'y'
+
+def report_progress(bytes_transferred, total_bytes):
+    """Report the progress of the download."""
+    pct = float(bytes_transferred) / float(total_bytes) * 100.0
+    print "   %d of %d bytes (%d%%)" % (bytes_transferred, total_bytes,
+            int(pct))
 
 # the script
 if sys.argv[0] == __file__:
@@ -87,7 +94,6 @@ if sys.argv[0] == __file__:
     # get the s3 bucket.
     if s3.lookup(bucket_name) is None:
         print "No such bucket: %s" % bucket_name
-        print "** Bucket \"#{bucket_name}\" does not exist on S3!"
         if not confirm("Do you want me to create it?"):
             sys.exit(1)
         bucket = s3.create_bucket(bucket_name)
@@ -114,10 +120,9 @@ if sys.argv[0] == __file__:
         print "** updating existing object"
 
     print "** writing object... "
-    s3obj.set_contents_from_filename(file_name)
-    print "complete!"
-    s3obj.set_acl('public-read')
-    print "** object has public_read access"
+    s3obj.set_contents_from_filename(file_name, None, True, report_progress,
+            10, 'public-read')
+    print "** complete! Object has public_read access."
     public_url = s3obj.generate_url(0, query_auth=False)
 
     print "You can now access your object with the URL:"
