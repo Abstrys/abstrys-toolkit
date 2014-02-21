@@ -54,7 +54,6 @@ for filename in expanded_list:
     (contents, times) = re.subn(search_term, replace_term, contents, 0,
             re.MULTILINE|re.UNICODE)
 
-
     if times > 0:
         end = 's' if times > 1 else ''
         print " - %d replacement%s made." % (times, end)
@@ -62,8 +61,6 @@ for filename in expanded_list:
         out_file = open(filename, "w+")
         out_file.write(contents)
         out_file.close()
-    else:
-        print " - unchanged."
 
 print "\nfinished!\n"
 sys.exit(0)

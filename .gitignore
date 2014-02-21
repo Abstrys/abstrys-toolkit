@@ -3,6 +3,7 @@ README.html
 legacy/
 dist/
 build/
+tests/
 aws-config.txt
 MANIFEST
 
