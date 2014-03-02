@@ -61,6 +61,8 @@ for filename in expanded_list:
         out_file = open(filename, "w+")
         out_file.write(contents)
         out_file.close()
+    else:
+        print ""
 
 print "\nfinished!\n"
 sys.exit(0)

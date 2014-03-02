@@ -35,7 +35,7 @@ unsnip_dir = 'unsnips'
 snip_prefix = "~~|"
 snip_postfix = "|~~"
 unsnippetize = False
-
+files = []
 USAGE = """snippetize - cut a file into snippets (or remove snippet markers)
 
 Usage:
@@ -90,6 +90,10 @@ In Python, Ruby, or in a bash script, you would have::
 """.format(source_dir=source_dir, snip_dir=snip_dir, unsnip_dir=unsnip_dir,
         snip_prefix=snip_prefix, snip_postfix=snip_postfix)
 
+#
+# Functions used by the script
+#
+
 def unsnip_file(filename):
     """Write the file to the destination without any snip tags"""
     f = open(filename)
@@ -138,33 +142,52 @@ def snip_file(filename):
     # remember to close the file...
     f.close()
 
-# There's one argument: '-u', which will unsnippetize a file.
-if (sys.argv[1] == '-h') or (sys.argv[1] == '-?'):
-    print USAGE
-    sys.exit()
-elif sys.argv[1] == '-u':
-    unsnippetize = True
-    files = sys.argv[2:]
-else:
-    files = sys.argv[1:]
+def process_file_list(process, files):
+"""Process (either snip or unsnip) a list of files.
+"""
+    for filename in files:
+        filename = os.path.abspath(filename)
+        if os.path.isdir(filename) is True:
+            # if a directory, operate on all files within it.
+            process_file_list(os.listdir(filename))
+        else:
+            process(filename)
+
+#
+# The script starts here
+#
+
+# check command-line args.
+for arg_num in range(1, len(sys.argv)):
+    arg = sys.argv[arg_num]
+    if arg.startswith('-'):
+        if (arg == '-h') or (arg == '--help') or (arg == '-?'):
+            print USAGE
+            sys.exit()
+        elif arg == '-u' or (arg == '--unsnip'):
+            unsnippetize = True
+        else:
+            print "Unrecognized command: '%s'." % arg
+            print "Use 'snippetize -h' for help."
+            sys.exit()
+    else:
+        files = sys.argv[arg_num:]
+        break
 
 # if no files were given, then just operate on all files in the source
 # directory.
 if len(files) == 0:
-    files += source_dir
+    files.append(source_dir)
+
+# default to snip.
+process = snip_file
 
 # make sure output dirs are there!
 if unsnippetize:
+    process = unsnip_file
     if not os.path.exists(unsnip_dir):
         os.makedirs(unsnip_dir)
 else:
     if not os.path.exists(snip_dir):
         os.makedirs(snip_dir)
 
-for filename in files:
-    if os.path.isdir(filename):
-        # if a directory, operate on all files within it.
-        for f in os.listdir(filename):
-            snip_file(f)
-    else:
-        snip_file(filename)
