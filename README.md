@@ -9,7 +9,8 @@ Included in the toolkit are the following tools:
 - **[clinks][]** - check href links in HTML files.
 - **fix_filenames** - modifies filenames on the system to snake_case
 - **rompy** - Runs an arbitrary command when a tracked file's modification time changes
-- **s3lod** - Lists or downloads the contents of Amazon S3 buckets
+- **[s3del][]** - Deletes Amazon S3 buckets or keys.
+- **[s3lod][]** - Lists Or Downloads the contents of Amazon S3 buckets
 - **[s3pub][]** - Publishes (upload and make public) any file from the local system to an Amazon S3 bucket
 - **[srep][]** - search and replace in files given a filespec (either file names or a glob, ex. *.xml)
 - **[snippetize][]** - cut a file into snippets (or remove snippet markers)
@@ -42,9 +43,10 @@ Contact [eron@abstrys.com](mailto:eron@abstrys.com?Subject=abstrys-toolkit).
 [clinks]: https://github.com/Abstrys/abstrys-toolkit/blob/master/docs/clinks.rst
 [license-file]: https://github.com/Abstrys/abstrys-toolkit/blob/master/LICENSE
 [license]: http://opensource.org/licenses/BSD-3-Clause
+[s3del]: https://github.com/Abstrys/abstrys-toolkit/blob/master/docs/s3del.rst
+[s3lod]: https://github.com/Abstrys/abstrys-toolkit/blob/master/docs/s3lod.rst
 [s3pub]: https://github.com/Abstrys/abstrys-toolkit/blob/master/docs/s3pub.rst
 [snippetize]: https://github.com/Abstrys/abstrys-toolkit/blob/master/docs/snippetize.md
 [srep]: https://github.com/Abstrys/abstrys-toolkit/blob/master/docs/srep.rst
 [zip]: https://github.com/Abstrys/abstrys-toolkit/archive/master.zip
-
 

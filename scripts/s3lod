@@ -176,7 +176,7 @@ def split_s3_path(s3_path):
         return (s3_path, None)
 
 def print_s3key_info(s3bucket, s3key):
-    print "%s/%s:" % (s3bucket_name, s3key.name)
+    print "%s/%s:" % (s3bucket.name, s3key.name)
     if s3key.content_disposition is not None:
         print "  content-disposition: %s" % s3key.content_disposition
     if s3key.content_encoding is not None:

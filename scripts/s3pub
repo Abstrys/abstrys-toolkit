@@ -20,34 +20,61 @@ USAGE = """
 s3pub
 =====
 
-Publish files on Amazon S3.
+Publish files on Amazon S3. This script can also unpublish files (make them
+private), upload files and publish them in one step, or just upload files while
+keeping them private.
 
 Usage
 -----
 
 There are three forms of usage:
 
-* The basic form::
+* The basic form, which publishes local files to S3::
 
-    {s3pub} [-r] <filespec> <s3_path>
+    {s3pub} [-y|r|u] <filespec> <s3_path>
 
-* The publish/unpublish form::
+* The publish/unpublish form, which changes the access of files already on S3::
 
-    {s3pub} [-u] <s3_path>
+    {s3pub} [-y|u] <s3_path>
 
-* The argfile form::
+* The argfile form, which takes a file of paths to publish to S3::
 
-    {s3pub} [-u] -f <argfile> [s3_path]
+    {s3pub} [-y|u|f] <argfile> [s3_path]
+
+Switches
+--------
 
 Switches, if provided, always precede the accompanying arguments.
 
-The ``-y`` switch can be used with any of these forms to automatically answer
-'yes' to any queries (of the form "are you sure you want to do this?"). If
-``-y`` is specified:
+**-h**
+    Prints help. You can pipe the output of this command to rst2*.py to
+    generate HTML, manpage, or other versions of this help.
 
-* s3 buckets that don't exist will automatically be created if necessary.
+**-r**
+    Can be specified when you also specify local filespecs to publish or upload
+    to S3. If one of the filespecs is a directory, then {s3pub} will
+    recursively upload the directory's contents. If it contains subdirectories,
+    their contents will also be uploaded. The directory structure will be
+    preserved on S3.
 
-* files will be published and/or overwritten without confirmation.
+**-u**
+    When used with either local-file or argfile modes of operation, this flag
+    will cause the normal publish operation to be upload-only. The files will
+    remain private.
+
+    When used with the publish/unpublish form to work with files already on S3,
+    the flag will unpublish already-published files, reverting them to private.
+
+**-y**
+    The ``-y`` switch, when specified, tells #{s3pub} to automatically answer
+    'yes' to any queries (of the form "are you sure you want to do this?"). If
+    ``-y`` is specified:
+
+    * s3 buckets that don't exist will automatically be created if necessary.
+
+    * files will be published and/or overwritten without any confirmation.
+
+    With great power comes great responsibility. Play carefully.
 
 Arguments
 ---------
@@ -55,7 +82,8 @@ Arguments
 **filespec**
     A local file or directory, file-glob, or list of files to publish.  If a
     directory is specified, the ``-r`` switch can be used to copy all of the
-    files in the directory recursively.
+    files in the directory recursively. The ``-u`` argument will cause the
+    files to be uploaded only, and not published.
 
 **s3_path**
     A bucket or path on S3. When a path is provided to s3pub by itself, it is
@@ -64,17 +92,16 @@ Arguments
     instead.
 
 **argfile**
-    A file containing s3pub arguments, one set per line. The argument lines,
-    just as arguments passed via the command-line, can begin with a switch such
-    as ``-r`` or ``-u``, but must obey all of the normal rules for specifying
-    arguments (if a filename has spaces in it, it must be quoted, etc.). You
-    cannot nest another argfile argument within this file, however.
+    A file containing local filepaths and s3 paths for publishing files, one
+    set per line. To specify the argfile, you *must* precede it with the ``-f``
+    switch, or it will be either be interpreted as an s3 path or as a file to
+    upload.
 
-    To specify the argfile, you *must* precede it with the ``-f`` switch, or it
-    will be either be interpreted as an s3 path or as a file to upload.
+    The ``-u`` switch will cause the files to be uploaded only, and not
+    published.
 
-    You can specify *both* an argfile and an s3 path. If so, the argfile is
-    considered to be a simple list of filespecs to upload.
+    You can specify *both* an argfile and an s3 path. If so, the
+    argfile is considered to be a simple list of filespecs to upload.
 
 Notes
 -----
@@ -145,7 +172,8 @@ def process_args(args):
             sys.exit()
         else:
             # store any other switches in the switches list.
-            switches += args[i][1]
+            for char in args[i][1:]:
+                switches += char
         # increment the counter.
         i += 1
 
@@ -243,8 +271,11 @@ def split_s3_path(s3_path):
     else:
         return (s3_path, None)
 
+
 def publish_or_unpublish_existing(s3_path):
-    """Make the object at the given S3 path public and return its URL."""
+    """Make the object at the given S3 path public (or private) and return its
+    URL. The mode is chosen by the presence of the command-lines switch
+    '-u'."""
     bucket_name, object_name = split_s3_path(s3_path)
 
     bucket = None
@@ -272,7 +303,7 @@ def publish_or_unpublish_existing(s3_path):
     return public_urls
 
 
-def publish_file(file_path, s3_path):
+def publish_or_upload_file(file_path, s3_path):
     """Publish a file (upload and make public) to an s3 location. Return the
     URL."""
 
@@ -303,7 +334,7 @@ def publish_file(file_path, s3_path):
     else:
         bucket = s3.get_bucket(bucket_name)
 
-    print "publishing:"
+    print "uploading:" if 'u' in switches else "publishing:"
     print "  %s" % file_path
     print "  -> S3://%s/%s" % (bucket_name, object_name)
 
@@ -323,9 +354,15 @@ def publish_file(file_path, s3_path):
         print "** updating existing object"
 
     print "** writing object... "
+    canned_acl = 'private' if 'u' in switches else 'public-read'
     s3obj.set_contents_from_filename(file_path, None, True, report_progress,
-            10, 'public-read')
-    print "** complete! Object has public_read access."
+            10, canned_acl)
+    print "** complete! Object has %s access." % canned_acl
+
+    # no need to generate a URL for a non-public upload
+    if 'u' in switches:
+        return None
+
     public_url = s3obj.generate_url(0, query_auth=False)
     print "You can now access your object with the URL:"
     print "  %s" % public_url
@@ -338,7 +375,7 @@ def publish_files(filespec, s3_path):
         if 'r' in switches and os.path.isdir(filepath):
             publish_files('%s/*' % filepath, '%s/%s' % (s3_path, base_name))
         else:
-            publish_file(filepath, '%s/%s' % (s3_path, base_name))
+            publish_or_upload_file(filepath, '%s/%s' % (s3_path, base_name))
 
 #
 # THE SCRIPT
@@ -374,8 +411,10 @@ if s3 is None:
 
 # now, operate based on the mode...
 
+#
+# argfile mode.
+#
 if 'f' in switches:
-    # argfile mode.
     f = open(argfile, 'r')
 
     if s3_destination is not "":
@@ -388,15 +427,19 @@ if 'f' in switches:
             (filespec, s3dest) = split(argline)
             for filepath in glob.glob(filespec.strip()):
                 base_name = os.path.basename(filepath)
-                publish_file(filepath, s3dest)
+                publish_or_upload_file(filepath, s3dest)
 
+#
+# file upload + publish mode
+#
 elif len(files_to_upload) > 0 and (s3_destination is not ""):
-    # file upload + publish mode
     for filespec in files_to_upload:
         publish_files(filespec, s3_destination)
 
+#
+# s3 publish/unpublish mode
+#
 elif s3_destination is not "":
-    # s3 publish/unpublish
     urls = publish_or_unpublish_existing(s3_destination)
     if urls == None:
         print "** no matching objects found"
@@ -410,7 +453,8 @@ elif s3_destination is not "":
 
 else:
     # Hmmm, something weird happened here...
-    print "** Argument Error: I don't have any files to upload or an s3 destination!"
+    print """** argument error: I don't have any files to upload *or* an s3
+    destination to publish to! C'mon, give me *something* to work with here!"""
     get_help()
 
 # Fin!
