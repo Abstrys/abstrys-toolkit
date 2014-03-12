@@ -7,14 +7,14 @@ import glob
 # Some runtime variables...
 #
 
-files_to_upload = []
-s3_destination = ""
+config_file = 'aws-config.txt'
 argfile = None
-switches = []
+files_to_upload = []
 s3 = None  # the AWS::S3 client
+s3_destination = ""
+switches = []
 access_key_id = None
 secret_access_key = None
-config_file = 'aws-config.txt'
 
 USAGE = """
 s3pub
@@ -33,7 +33,7 @@ There are three forms of usage:
 
 * The publish/unpublish form::
 
-    {s3pub} [-r] [-u] <s3_path>
+    {s3pub} [-u] <s3_path>
 
 * The argfile form::
 
@@ -114,15 +114,15 @@ def get_help():
 
 def process_args(args):
     """Interpret the args and set switches"""
-    global switches
+
+    # provide access to global variables.
+    global argfile
+    global config_file
     global files_to_upload
     global s3_destination
-    global argfile
-
-    if len(args) < 1:
-        print "** You must supply at least one argument!"
-        get_help()
-        sys.exit()
+    global access_key_id
+    global secret_access_key
+    global switches
 
     # First, iterate through any switches. These always precede the other
     # arguments.
@@ -130,13 +130,14 @@ def process_args(args):
     while i < len(args) and args[i][0] == '-':
         if args[i][1] == '-':
             # Oooh, an extended command!
-            if args[i][1:] is '-access_key':
+            ext_cmd = args[i][1:]
+            if ext_cmd == '-access_key':
                 i += 1 # read the next argument.
                 access_key_id = args[i]
-            elif args[i][1:] is '-secret_key':
+            elif ext_cmd == '-secret_key':
                 i += 1 # read the next argument.
                 secret_access_key = args[i]
-            elif args[i][1:] is '-aws_config':
+            elif ext_cmd == '-aws_config':
                 i += 1 # read the next argument.
                 config_file = args[i]
         elif args[i][1] == 'h':
@@ -177,7 +178,7 @@ def process_args(args):
         sys.exit()
 
 
-def authenticate_s3(access_key_id, secret_access_key):
+def authenticate_s3(access_key_id, secret_access_key, config_file):
     """Authenticate with AWS and return an S3 object. Returns None if it failed
     to get the S3 object."""
     # Rules:
@@ -200,14 +201,14 @@ def authenticate_s3(access_key_id, secret_access_key):
             #     secret_access_key: SECRETACCESKEY
             #
             f = open(config_file, 'r')
-            config = yaml.safe_load(config_file)
+            config = yaml.safe_load(f)
             f.close()
             # Whatever command-line args *weren't* specified, fill them in with
             # details from the file.
             if not access_key_id:
-                access_key_id = aws_config['access_key_id']
+                access_key_id = config['access_key_id']
             if not secret_access_key:
-                secret_access_key = aws_config['secret_access_key']
+                secret_access_key = config['secret_access_key']
 
     if not (access_key_id and secret_access_key):
         # There are still some credentials missing. Look in the environment.
@@ -217,14 +218,8 @@ def authenticate_s3(access_key_id, secret_access_key):
             secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
 
     s3 = None
-
     if access_key_id and secret_access_key:
         s3 = boto.connect_s3(access_key_id, secret_access_key)
-    else:
-        # If we haven't discovered the credentials by now, just give up.
-        print "** No AWS access information was supplied or found. Aborting!"
-        print USAGE
-
     return s3
 
 def confirm(query):
@@ -263,22 +258,16 @@ def publish_or_unpublish_existing(s3_path):
 
     canned_acl_name = 'private' if 'u' in switches else 'public-read'
 
-    # if recursive, operate on all keys that match the "object" part of the
-    # path.
+    # operate on all keys that match the "object" part of the path.
     public_urls = []
-    if 'r' in switches:
-        for s3obj in bucket.list(object_name):
-            s3obj.set_acl(canned_acl_name)
-            public_urls.append(s3obj.generate_url(0, query_auth=False))
+    if object_name == None:
+        objects = bucket.list()
     else:
-        s3obj = bucket.get_key(object_name)
-        if s3obj is None:
-            print "** object %s doesn't exist in bucket %s" % (object_name,
-                    bucket_name)
-            return None
+        objects = bucket.list(object_name)
 
+    for s3obj in objects:
         s3obj.set_acl(canned_acl_name)
-        public_urls = [s3obj.generate_url(0, query_auth=False)]
+        public_urls.append(s3obj.generate_url(0, query_auth=False))
 
     return public_urls
 
@@ -373,12 +362,15 @@ except ImportError, e:
 if len(sys.argv) > 1:
     process_args(sys.argv[1:])
 else:
+    print "** you must supply at least one argument!"
     get_help()
-
-s3 = authenticate_s3(access_key_id, secret_access_key)
-if s3 is None:
-    print "Could not make a connection to Amazon S3."
     sys.exit()
+
+s3 = authenticate_s3(access_key_id, secret_access_key, config_file)
+if s3 is None:
+    print "** could not make a connection to Amazon S3."
+    get_help()
+    sys.exit(1)
 
 # now, operate based on the mode...
 
@@ -406,6 +398,10 @@ elif len(files_to_upload) > 0 and (s3_destination is not ""):
 elif s3_destination is not "":
     # s3 publish/unpublish
     urls = publish_or_unpublish_existing(s3_destination)
+    if urls == None:
+        print "** no matching objects found"
+        sys.exit()
+
     n = len(urls)
     print "Made %d file%s %s:" % (n, '' if n == 1 else 's', 'private' if 'u' in
             switches else 'public')

@@ -10,39 +10,20 @@ access_key_id = None
 secret_access_key = None
 
 USAGE = """
-s3lod
+s3del
 =====
 
-List or download the contents of S3 buckets.
+Delete an S3 bucket or its contents.
 
 Usage
 -----
 
 ::
 
-    {s3lod} [-i] [s3_path] ...
-
-Depending on whether an s3 path (consisting of bucket_name/and/path/to/object).
-is provided, one of the following actions will be taken:
-
-* If no path is provided, then the list of buckets will be returned.
-
-* If a path is specified and refers to a bucket, then a list of the contents of
-  that bucket are returned.
-
-* If the path is a partial path (does not match the name of an S3 object, but
-  matches part of its path) then a list of all of the S3 objects that match the
-  partial path are returned.
-
-* If the path is to an actual S3 object, then you can download the object
-  (default) or get its info (if the ``-i`` flag is provided.
-
-Switches, if provided, always precede the accompanying arguments.
+    {s3del} [s3_path] ...
 
 The s3 path can be repeated, so multiple buckets, partial paths or objects can
-be provided at once.  If the ``-i`` flag is provided, it effects all of the
-specified arguments: no files will be downloaded; only the object information
-will be returned.
+be provided at once.
 
 Notes
 -----
@@ -70,7 +51,7 @@ with any one of the following methods:
   ``--secret_key SECRETACCESSKEY``, providing your own AWS credentials in place
   of ACCESSKEYID and SECRETACCESSKEY.
 
-""".format(configfile=config_file, s3lod=__file__)
+""".format(configfile=config_file, s3del=__file__)
 
 def show_help():
     print USAGE
@@ -165,6 +146,12 @@ def authenticate_s3(access_key_id, secret_access_key, config_file):
     return s3
 
 
+def confirm(query):
+    """Confirm user input."""
+    answer = raw_input("%s (y/n): " % (query))
+    return answer.lower() == 'y'
+
+
 def split_s3_path(s3_path):
     """Get a bucket name and object path"""
     # Split the s3 path after the *first* slash character. The bucket name
@@ -174,35 +161,6 @@ def split_s3_path(s3_path):
         return s3_path.split('/', 1)
     else:
         return (s3_path, None)
-
-def print_s3key_info(s3bucket, s3key):
-    print "%s/%s:" % (s3bucket_name, s3key.name)
-    if s3key.content_disposition is not None:
-        print "  content-disposition: %s" % s3key.content_disposition
-    if s3key.content_encoding is not None:
-        print "  content-encoding: %s" % s3key.content_encoding
-    if s3key.content_language is not None:
-        print "  content-language: %s" % s3key.content_language
-    if s3key.content_type is not None:
-        print "  content-type: %s" % s3key.content_type
-    if s3key.encrypted is not None:
-        print "  encrypted: %s" % s3key.encrypted
-    if s3key.etag is not None:
-        print "  etag: %s" % s3key.etag
-    if s3key.last_modified is not None:
-        print "  last-modified: %s" % s3key.last_modified
-    if s3key.md5 is not None:
-        print "  md5: %s" % s3key.md5
-    if len(s3key.metadata) > 0:
-        print "  metadata: %s" % s3key.metadata
-    if s3key.owner is not None:
-        print "  owner: %s" % s3key.owner
-    if s3key.size is not None:
-        print "  size: %s" % s3key.size
-    if s3key.storage_class is not None:
-        print "  storage-class: %s" % s3key.storage_class
-    if s3key.version_id is not None:
-        print "  version-id: %s" % s3key.version_id
 
 #
 # THE SCRIPT
@@ -223,28 +181,32 @@ except ImportError, e:
     print "to install it first."
     sys.exit(1)
 
-# It's OK if there aren't any args. We'll just return the bucket list.
 if len(sys.argv) > 1:
     process_args(sys.argv[1:])
-
-s3 = authenticate_s3(access_key_id, secret_access_key, config_file)
-if s3 is None:
-    print "Could not make a connection to Amazon S3."
+else:
+    print "** you must supply at least one argument!"
     get_help()
     sys.exit()
 
-# if no args, just list the buckets.
 if len(s3_paths_to_process) == 0:
-    rs = s3.get_all_buckets()
-    for key in rs:
-        print key.name
-    sys.exit(0)
+    print "** no buckets or objects supplied as input. Nothing to do..."
+    get_help();
+
+s3 = authenticate_s3(access_key_id, secret_access_key, config_file)
+if s3 is None:
+    print "** could not make a connection to Amazon S3."
+    get_help()
+    sys.exit()
 
 # If we have args (that is, we're here), they're either:
-# - buckets to list the # contents of
-# - partial paths to list matching objects for
-# - files to download (or get info about).
+# - buckets to delete
+# - partial paths to delete
+# - exact keys to delete
 
+keys_to_delete = []
+buckets_to_delete = []
+
+# gather the buckets and keys to delete.
 for s3_path in s3_paths_to_process:
     bucket_name, object_name = split_s3_path(s3_path)
 
@@ -255,25 +217,50 @@ for s3_path in s3_paths_to_process:
 
     bucket = s3.get_bucket(bucket_name)
 
-    # first, try for an exact match
-    s3key = bucket.get_key(object_name)
-
-    if s3key is None:
-        # maybe this is a partial path?
-        s3_key_list = bucket.list(object_name)
-        for s3key in s3_key_list:
-            if 'i' in switches:
-                print_s3key_info(bucket, s3key)
-            else:
-                print "%s/%s" % (bucket_name, s3key.name)
+    # only delete a bucket if its name is provided without any additional path
+    # elements.
+    if object_name is None:
+        # to delete the bucket, we need to delete all of its keys first.
+        for s3key in bucket.list():
+            keys_to_delete.append((bucket, s3key))
+        buckets_to_delete.append(bucket)
     else:
-        if 'i' in switches:
-            print_s3key_info(bucket, s3key)
+        # first try to get an exact match
+        s3key = bucket.get_key(object_name)
+        if s3key is None:
+            for s3key in bucket.list(object_name):
+                keys_to_delete.append((bucket, s3key))
         else:
-            # download the file.
-            path, filename = os.path.split(object_name)
-            sys.stdout.write("Downloading %s/%s as %s... " %  (bucket_name, object_name,
-                filename))
-            key.get_contents_to_filename(filename)
-            sys.stdout.write("OK!\n")
+            keys_to_delete.append((bucket, s3key))
 
+if len(keys_to_delete) > 0:
+    print "The following S3 objects will be deleted:"
+    for s3key in keys_to_delete:
+        print "  %s/%s" % (s3key[0].name, s3key[1].name)
+        #print "  %s" % s3key.name
+
+if len(buckets_to_delete) > 0:
+    print "The following S3 buckets will be deleted:"
+    for s3bucket in buckets_to_delete:
+        print "  %s" % s3bucket.name
+
+if 'y' not in switches and not confirm("Proceed with delete?"):
+    print "*Canceled Delete*\nWhew, that was close!"
+    sys.exit()
+
+# OK, we're deleting stuff now!
+
+# delete keys first
+if len(keys_to_delete) > 0:
+    print "Deleting keys:"
+    for s3key in keys_to_delete:
+        print "  %s/%s" % (s3key[0].name, s3key[1].name)
+        s3key[1].delete()
+
+if len(buckets_to_delete) > 0:
+    print "Deleting buckets:"
+    for s3bucket in buckets_to_delete:
+        print "  %s" % s3bucket.name
+        s3bucket.delete()
+
+print "Finished!"

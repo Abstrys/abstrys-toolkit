@@ -6,6 +6,7 @@ script_names = [
     'scripts/clinks',
     'scripts/fix_filenames',
     'scripts/rompy',
+    'scripts/s3del',
     'scripts/s3lod',
     'scripts/s3pub',
     'scripts/snippetize',
@@ -26,9 +27,10 @@ Included in the toolkit are the following tools:
 -  **fix\_filenames** - modifies filenames on the system to snake\_case
 -  **rompy** - Runs an arbitrary command when a tracked file's modification
                time changes
+-  **s3del** - Deletes Amazon S3 keys or buckets
 -  **s3lod** - Lists or downloads the contents of Amazon S3 buckets
--  **s3pub** - Publishes (upload and make public) any file from the
-   local system to an Amazon S3 bucket
+-  **s3pub** - Publishes (upload and make public) any file(s) from the
+               local system to an Amazon S3 bucket.
 -  **srep** - search and replace in files given a filespec (either file names
               or a glob, ex. \*.xml)
 -  **snippetize** - cut a file into snippets (or remove snippet markers)
@@ -49,8 +51,9 @@ Contact
 `eron@abstrys.com <mailto:eron@abstrys.com?Subject=abstrys-toolkit>`__."""
 
 setup(name='abstrys-toolkit',
-      description='Useful command-line tools and scripts.',
-      version='1.03',
+      description="""Useful command-line tools and scripts, designed for
+      technical writing and publication.""",
+      version='1.04',
       requires=['json', 'boto', 'PyYAML', 'httplib2'],
       scripts=script_names,
       author='Eron Hennessey',
