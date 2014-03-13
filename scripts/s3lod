@@ -13,34 +13,35 @@ USAGE = """
 s3lod
 =====
 
-List or download the contents of S3 buckets.
+List Amazon S3 buckets or their contents, and get information about or download
+S3 objects.
 
 Usage
 -----
 
 ::
 
-    {s3lod} [-i] [s3_path] ...
+    s3lod [-i] [s3_path] ...
 
-Depending on whether an s3 path (consisting of bucket_name/and/path/to/object).
+Depending on whether an s3 path (consisting of bucket_name/and/path/to/object)
 is provided, one of the following actions will be taken:
 
-* If no path is provided, then the list of buckets will be returned.
+* If *no path* is provided, then the list of buckets will be returned.
 
-* If a path is specified and refers to a bucket, then a list of the contents of
-  that bucket are returned.
+* If *a path is specified and refers to a bucket*, then a list of the contents
+  of that bucket are returned.
 
-* If the path is a partial path (does not match the name of an S3 object, but
+* If the path is a *partial path* (does not match the name of an S3 object, but
   matches part of its path) then a list of all of the S3 objects that match the
   partial path are returned.
 
-* If the path is to an actual S3 object, then you can download the object
-  (default) or get its info (if the ``-i`` flag is provided.
+* If the path is to an actual S3 object, then you can *download* the object
+  (default) or *get its info* (if the ``-i`` flag is provided).
 
-Switches, if provided, always precede the accompanying arguments.
+Switches, if provided, must always precede the accompanying arguments.
 
 The s3 path can be repeated, so multiple buckets, partial paths or objects can
-be provided at once.  If the ``-i`` flag is provided, it effects all of the
+be provided at once. If the ``-i`` flag is provided, it effects all of the
 specified arguments: no files will be downloaded; only the object information
 will be returned.
 
@@ -117,6 +118,9 @@ def process_args(args):
 
     # done with switches, let's move on to s3 path arguments.
     for s3_path in args[i:]:
+        # remove any trailing slashes.
+        if s3_path[-1] == '/':
+            s3_path = s3_path[:-1]
         s3_paths_to_process.append(s3_path)
 
 
@@ -274,6 +278,6 @@ for s3_path in s3_paths_to_process:
             path, filename = os.path.split(object_name)
             sys.stdout.write("Downloading %s/%s as %s... " %  (bucket_name, object_name,
                 filename))
-            key.get_contents_to_filename(filename)
+            s3key.get_contents_to_filename(filename)
             sys.stdout.write("OK!\n")
 

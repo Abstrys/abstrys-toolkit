@@ -201,6 +201,9 @@ def process_args(args):
 
         # In either case, the last arg is the s3 destination.
         s3_destination = args[-1]
+        # remove any trailing slashes.
+        if s3_destination[-1] == '/':
+            s3_destination = s3_destination[:-1]
     else:
         print "** Hmm, I seem to have more, or fewer arguments than I know what to do with!"
         sys.exit()
