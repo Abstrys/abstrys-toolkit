@@ -5,21 +5,20 @@ import sys
 
 def print_error(string):
     """Print an error message."""
-    print "*** Dhop error: %s" % (string)
+    sys.stderr.write("*** Error: %s\n" % (string))
     return
 
 
 def confirm(query):
-    """Asks the user a Y/N question, and returns true/false depending on their
-    answer."""
+    """Asks the user a y/n question, and returns True if the user responded
+    with 'y'."""
     answer = raw_input("%s (y/n): " % (query))
     return answer.lower() == 'y'
 
 
 # adapted from http://www.python.org/dev/peps/pep-0257/
 def format_doc(string, extra_indent=0, line_start=0, line_end=-1):
-    """
-    Remove significant leading space from all lines and return the resulting
+    """Remove significant leading space from all lines and return the resulting
     string."""
 
     if not string:
@@ -59,13 +58,12 @@ def format_doc(string, extra_indent=0, line_start=0, line_end=-1):
 
 
 class TempMessage:
-    """A class for displaying temporary (eraseable) messages.
-    Typical use:
-       a = TempMessage("some text")
-       a.show()
-       # something happens...
-       a.erase()
-       # continue onward!
+    """A class for displaying temporary (eraseable) messages. Typical use::
+        a = TempMessage("some text")
+        a.show()
+        # something happens...
+        a.erase()
+        # continue onward!
     """
     text = ""
     erase_string = ""
@@ -124,26 +122,52 @@ class TwirlingProgressIndicator:
 
 class ProgressBar:
     """A console text-based bar-style progress indicator."""
-    progress_left_bound = '['
-    progress_right_bound = ']'
-    progress_fill = '#'
-    bar_size = 0
-    bar_percent = 0
     temp_message = None
+    bar_parts = None
+    bar_size = None
+    cur_value = None
+    target_value = None
+    outputs = None
 
-    def __init__(self, size=10):
+    def __init__(self, size=10, target=100, outputs=['bar'],
+            parts=['[','#',']']):
         self.temp_message = TempMessage()
-        self.bar_size = size
+        self.bar_parts = parts
+        self.bar_size = int(size)
+        self.target_value = target
+        self.outputs = outputs
+        self.cur_value = 0
 
-    def show(self, percent=None):
-        if percent:
-            self.bar_percent = percent
-        fill_amount = int((self.bar_percent * self.bar_size) / 100.0)
+    def set_target(self, value):
+        self.target_value = value
+
+    def update(self, value):
+        self.cur_value = value
+
+    def show(self, value=None):
+        if value:
+            self.cur_value = value
+        output_parts = ['','','']
+        for output_type in self.outputs:
+            if output_type == 'bar':
+                fill_amount = int((self.cur_value * self.bar_size) / self.target_value)
+                output_parts[0] = ('%s%s%s%s ' % (self.bar_parts[0],
+                    self.bar_parts[1] * int(fill_amount), ' ' * int(self.bar_size - fill_amount),
+                    self.bar_parts[2]))
+            if output_type[:3] == 'val':
+                (boo,units) = output_type.split(':')
+                if units:
+                    output_parts[1] = ('(%d/%d %s) ' % (self.cur_value,
+                        self.target_value, units))
+                else:
+                    output_parts[1] = ('(%d/%d) ' % (cur_value, target_value))
+            if output_type == 'pct':
+                output_parts[2] = ('%d' % (self.cur_value * 100.0 /
+                    self.target_value)) + '%'
+
         self.temp_message.erase()
-        self.temp_message.show('%s%s%s%s' % (self.progress_left_bound,
-            self.progress_fill
-            * int(fill_amount), ' ' * int(self.bar_size - fill_amount),
-            self.progress_right_bound))
+        self.temp_message.show('%s%s%s' % (output_parts[0], output_parts[1],
+            output_parts[2]))
 
     def erase(self):
         self.temp_message.erase()

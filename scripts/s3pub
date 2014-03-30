@@ -2,6 +2,8 @@
 import sys
 import os
 import glob
+from abstrys.cmd_utils import ProgressBar
+from abstrys.cmd_utils import format_doc
 
 #
 # Some runtime variables...
@@ -15,6 +17,7 @@ s3_destination = ""
 switches = []
 access_key_id = None
 secret_access_key = None
+progress_bar = ProgressBar(size=20, outputs=['bar', 'val:MB', 'pct'])
 
 USAGE = """
 s3pub
@@ -131,13 +134,16 @@ with any one of the following methods:
 
 """.format(configfile=config_file, s3pub=__file__)
 
+
 def show_help():
-    print USAGE
+    print(format_doc(USAGE))
     sys.exit()
+
 
 def get_help():
     print "Use '%s -h' to get help." % __file__
     sys.exit()
+
 
 def process_args(args):
     """Interpret the args and set switches"""
@@ -253,16 +259,17 @@ def authenticate_s3(access_key_id, secret_access_key, config_file):
         s3 = boto.connect_s3(access_key_id, secret_access_key)
     return s3
 
+
 def confirm(query):
     """Confirm user input."""
     answer = raw_input("%s (y/n): " % (query))
     return answer.lower() == 'y'
 
+
 def report_progress(bytes_transferred, total_bytes):
     """Report the progress of the transfer."""
-    pct = float(bytes_transferred) / float(total_bytes) * 100.0
-    print "   %d of %d bytes (%d%%)" % (bytes_transferred, total_bytes,
-            int(pct))
+    progress_bar.show(bytes_transferred / 1000)
+
 
 def split_s3_path(s3_path):
     """Get a bucket name and object path"""
@@ -337,9 +344,9 @@ def publish_or_upload_file(file_path, s3_path):
     else:
         bucket = s3.get_bucket(bucket_name)
 
-    print "uploading:" if 'u' in switches else "publishing:"
-    print "  %s" % file_path
-    print "  -> S3://%s/%s" % (bucket_name, object_name)
+    sys.stdout.write("uploading:" if 'u' in switches else "publishing:")
+    print " %s" % file_path
+    print "   -> S3://%s/%s" % (bucket_name, object_name)
 
     if 'y' not in switches and not confirm("OK?"):
         sys.exit(0)
@@ -356,19 +363,21 @@ def publish_or_upload_file(file_path, s3_path):
     else:
         print "** updating existing object"
 
-    print "** writing object... "
+    sys.stdout.write("** writing S3://%s/%s ...\n   " % (bucket_name, object_name))
     canned_acl = 'private' if 'u' in switches else 'public-read'
+    total_bytes = os.path.getsize(file_path)
+    progress_bar.set_target(total_bytes / 1000)
+    granularity = min(total_bytes / 1000, 100)
     s3obj.set_contents_from_filename(file_path, None, True, report_progress,
-            10, canned_acl)
-    print "** complete! Object has %s access." % canned_acl
+            granularity, canned_acl)
+    print "\n** complete! Object has %s access." % canned_acl
 
     # no need to generate a URL for a non-public upload
     if 'u' in switches:
         return None
 
     public_url = s3obj.generate_url(0, query_auth=False)
-    print "You can now access your object with the URL:"
-    print "  %s" % public_url
+    print "   public URL: %s" % public_url
     return public_url
 
 def publish_files(filespec, s3_path):
@@ -379,6 +388,7 @@ def publish_files(filespec, s3_path):
             publish_files('%s/*' % filepath, '%s/%s' % (s3_path, base_name))
         else:
             publish_or_upload_file(filepath, '%s/%s' % (s3_path, base_name))
+            print ""
 
 #
 # THE SCRIPT
@@ -431,6 +441,7 @@ if 'f' in switches:
             for filepath in glob.glob(filespec.strip()):
                 base_name = os.path.basename(filepath)
                 publish_or_upload_file(filepath, s3dest)
+                print ""
 
 #
 # file upload + publish mode

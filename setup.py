@@ -52,7 +52,7 @@ Contact
 setup(name='abstrys-toolkit',
       description="""Useful command-line tools and scripts, designed for
       technical writing and publication.""",
-      version='1.05b',
+      version='1.05c',
       requires=['json', 'boto', 'PyYAML', 'httplib2'],
       packages=['abstrys'],
       scripts=script_names,
