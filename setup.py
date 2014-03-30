@@ -12,7 +12,6 @@ script_names = [
     'scripts/snippetize',
     'scripts/srep', ]
 
-
 long_desc = """
 abstrys-toolkit
 ===============
@@ -53,8 +52,9 @@ Contact
 setup(name='abstrys-toolkit',
       description="""Useful command-line tools and scripts, designed for
       technical writing and publication.""",
-      version='1.04',
+      version='1.05b',
       requires=['json', 'boto', 'PyYAML', 'httplib2'],
+      packages=['abstrys'],
       scripts=script_names,
       author='Eron Hennessey',
       author_email='eron@abstrys.com',

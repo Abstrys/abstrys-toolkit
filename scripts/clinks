@@ -6,40 +6,7 @@ import sys
 import glob
 import re
 import httplib2
-
-
-class progress_indicator:
-    """A console text-based progress indicator."""
-
-    def __init__(self):
-        # data
-        self.progress_frames = ['-', '\\', '|', '/', '-', '\\', '|']
-        self.progress_string = ' %s '
-        self.progress_string_len = 3
-        self.progress_erase_string = '\b\b\b   \b\b\b'
-        # self.cur_frame will be incremented to zero on the first get_next()
-        self.cur_frame = -1
-
-    def show_next(self):
-        """Write the next progress frame to sys.stdout."""
-        self.cur_frame += 1
-        if self.cur_frame == len(self.progress_frames):
-            self.cur_frame = 0
-
-        sys.stdout.write(self.progress_string % (
-            self.progress_frames[self.cur_frame]))
-
-        sys.stdout.flush()
-
-    def erase(self):
-        """Erase the current progress frame from sys.stdout."""
-        sys.stdout.write(self.progress_erase_string)
-        sys.stdout.flush()
-
-    def len(self):
-        """Get the length of the progress frame, in characters."""
-        return self.progress_string_len
-
+from abstrys.cmd_utils import TwirlingProgressIndicator
 
 USAGE = """
 clinks.py
@@ -90,8 +57,8 @@ output_filename = 'bad_links.txt'
 filespecs = ['*.html', '*.htm']
 attr_types = ['href']
 ignore_list = []
-http = httplib2.Http()
-pi = progress_indicator()
+http = httplib2.Http(disable_ssl_certificate_validation=True)
+pi = TwirlingProgressIndicator()
 
 files_to_check = []
 
@@ -153,13 +120,12 @@ for filename in files_to_check:
                 continue
             # check the link!
             links_checked += 1
-            pi.show_next()
+            pi.show()
             response = http.request(link, 'HEAD')
             code = int(response[0]['status'])
             # bad links are considered anything with a result > 200
             if code > 200:
                 bad_links.append("  %s (%d)" % (link, code))
-            pi.erase()
 
     if len(bad_links) < 1:
         msg_len = len(cur_file_msg)

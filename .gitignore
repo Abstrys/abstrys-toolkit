@@ -6,6 +6,8 @@ build/
 tests/
 aws-config.txt
 MANIFEST
+*.swp
+bad_links.txt
 
 # C extensions
 *.so

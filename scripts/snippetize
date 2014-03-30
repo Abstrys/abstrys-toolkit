@@ -64,7 +64,7 @@ Making snippets:
       {snip_prefix} snippet_name
 
    The *snippet_name* is a unique name within the file that you use to refer
-   to the snippet.  The resulting snippet file will be named like this::
+   to the snippet. The resulting snippet file will be named like this::
 
      file_name-snippet_name.file_ext
 
@@ -143,8 +143,7 @@ def snip_file(filename):
     f.close()
 
 def process_file_list(process, files):
-"""Process (either snip or unsnip) a list of files.
-"""
+    """Process (either snip or unsnip) a list of files."""
     for filename in files:
         filename = os.path.abspath(filename)
         if os.path.isdir(filename) is True:
