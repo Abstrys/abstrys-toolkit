@@ -7,7 +7,10 @@ tests/
 aws-config.txt
 MANIFEST
 *.swp
+<<<<<<< HEAD
 bad_links.txt
+=======
+>>>>>>> f9df01528344cffb7970ff991fef3a2bf15c8d85
 
 # C extensions
 *.so
