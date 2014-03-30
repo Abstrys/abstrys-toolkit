@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+import abstrys.cmd_utils as util
 
 config_file = 'aws-config.txt'
 switches = []
@@ -54,7 +55,7 @@ with any one of the following methods:
 """.format(configfile=config_file, s3del=__file__)
 
 def show_help():
-    print USAGE
+    cmd_utils.format_doc(USAGE)
     sys.exit()
 
 def get_help():
@@ -144,12 +145,6 @@ def authenticate_s3(access_key_id, secret_access_key, config_file):
     if access_key_id and secret_access_key:
         s3 = boto.connect_s3(access_key_id, secret_access_key)
     return s3
-
-
-def confirm(query):
-    """Confirm user input."""
-    answer = raw_input("%s (y/n): " % (query))
-    return answer.lower() == 'y'
 
 
 def split_s3_path(s3_path):
@@ -244,7 +239,7 @@ if len(buckets_to_delete) > 0:
     for s3bucket in buckets_to_delete:
         print "  %s" % s3bucket.name
 
-if 'y' not in switches and not confirm("Proceed with delete?"):
+if 'y' not in switches and not util.confirm("Proceed with delete?"):
     print "*Canceled Delete*\nWhew, that was close!"
     sys.exit()
 
