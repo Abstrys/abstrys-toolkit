@@ -1,0 +1,35 @@
+# ProgressBar
+
+A console text-based bar-style progress indicator.
+
+## Constructor
+
+<class>ProgressBar()</class>
+
+Create a new ProgressBar.
+
+syntax:
+  - ProgressBar(size, outputs)
+
+options:
+  - *size* -- the size, in characters, of the progress bar.  *Default*: 10
+
+  - *outputs* -- a list of data types to output; one or more of the following
+      values:
+
+        - 'bar' - *Default*. Show a bar displaying the amount of progress.
+
+        - 'val:zz' - Show the actual value of the progress, in the form:
+            ``(xx/yy zz)``, where *xx* is the current value, *yy* is the target
+            value, and *zz* is an optional sequence of characters separated
+            from 'value' by a ':' character.
+
+        - 'pct' - Show the percentage of the progress, in the form ``xx%``.
+
+      The outputs are rendered in the following order:
+
+        ``bar (val) pct``
+
+## Methods
+
+
