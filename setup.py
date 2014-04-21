@@ -4,8 +4,10 @@ from distutils.core import setup
 script_names = [
     'scripts/cleanjson',
     'scripts/clinks',
-    'scripts/fix_filenames',
+    'scripts/fix-filenames',
+    'scripts/music-album-renamer',
     'scripts/rompy',
+    'scripts/s3arc',
     'scripts/s3del',
     'scripts/s3lod',
     'scripts/s3pub',
@@ -52,7 +54,7 @@ Contact
 setup(name='abstrys-toolkit',
       description="""Useful command-line tools and scripts, designed for
       technical writing and publication.""",
-      version='1.05c',
+      version='1.05d',
       requires=['json', 'boto', 'PyYAML', 'httplib2'],
       packages=['abstrys'],
       scripts=script_names,
