@@ -28,7 +28,7 @@ switch_aliases = {
 
 access_key_id = None
 secret_access_key = None
-progress_bar = ProgressBar(size=20, outputs=['bar', 'val:MB', 'pct'])
+progress_bar = ProgressBar(size=20, outputs=['bar', 'val:B', 'pct'])
 
 USAGE = """
 s3up
@@ -279,9 +279,9 @@ Both public (P) and private (p) switches set. Defaulting to the safer option:
         sys.exit()
 
 
-def report_progress(bytes_transferred, total_bytes):
+def report_progress(bytes_transferred):
     """Report the progress of the transfer."""
-    progress_bar.show(bytes_transferred / 1000.0)
+    progress_bar.show(bytes_transferred / 1000)
 
 
 def change_object_privacy(s3_path):
@@ -416,7 +416,7 @@ def upload_file(file_path, s3_path):
     sys.stdout.write("** writing %s ...\n   " % s3_path)
     canned_acl = 'public-read' if 'P' in switches else 'private'
     total_bytes = os.path.getsize(file_path)
-    progress_bar.set_target(total_bytes / 1000.0)
+    progress_bar.set_target(total_bytes / 1000)
     s3obj.set_metadata('md5-hexdigest', local_md5)
     s3obj.set_contents_from_filename(file_path, headers=None, replace=True,
             cb=report_progress, num_cb=-1, policy=canned_acl)
