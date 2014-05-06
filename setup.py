@@ -8,7 +8,6 @@ script_names = [
     'scripts/fix-filenames',
     'scripts/music-album-renamer',
     'scripts/rompy',
-    'scripts/s3arc',
     'scripts/s3del',
     'scripts/s3lod',
     'scripts/s3pub',
