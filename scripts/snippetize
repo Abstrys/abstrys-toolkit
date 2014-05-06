@@ -190,3 +190,5 @@ else:
     if not os.path.exists(snip_dir):
         os.makedirs(snip_dir)
 
+process_file_list(process, files)
+
