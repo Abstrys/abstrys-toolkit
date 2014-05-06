@@ -2,6 +2,7 @@
 from distutils.core import setup
 
 script_names = [
+    'scripts/camel2snake',
     'scripts/cleanjson',
     'scripts/clinks',
     'scripts/fix_filenames',

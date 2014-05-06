@@ -4,3 +4,7 @@ from abstrys.txt_utils import camel2snake
 
 if len(sys.argv) > 1:
     print camel2snake(" ".join(sys.argv[1:]))
+else:
+    # assume stdin
+    sys.stdout.write(camel2snake(sys.stdin.read()))
+
