@@ -4,6 +4,8 @@
 
 import sys
 import os
+import hashlib
+from cmd_utils import *
 
 try:
     import boto
@@ -52,7 +54,7 @@ def get_s3_key(s3_path):
         # create (or get) the s3 bucket.
         s3_bucket = s3.get_bucket(s3_bucket_name)
     except:
-        print "Eeek! something happened!"
+        print_error("Eeek! something happened!")
         sys.exit(1)
 
     # does the s3 object exist?
@@ -133,20 +135,31 @@ def get_s3_md5_hex_digest(s3_path=None, s3_object=None):
         return None
     return s3_object.get_metadata('md5-hexdigest')
 
-
-def set_s3_md5_hex_digest(s3_path, md5_hex_string):
-    print "setting object %s with the md5 hex digest: %s" % (s3_path, md5_hex_string)
-
-    # first, get the bucket and object.
-    (s3_bucket_name, s3_object_name) = get_bucket_and_object_from_s3_path(s3_path)
-
-    try:
-        # create (or get) the s3 bucket.
-        s3_bucket = s3.get_bucket(s3_bucket_name)
-    except:
-        print "Eeek! something happened!"
+def set_s3_md5_hex_digest(md5_hex_string, s3_object=None, s3_path=None):
+    if not s3_object and not s3_path:
+        print_error("Must set either object or s3 path for set_s3_md5_hex_digest!")
         sys.exit(1)
 
+    s3_bucket = None
+    s3_object_name = None
+
+    if s3_object:
+        # get the info from the S3 object (key)
+        s3_bucket = s3_object.bucket
+        s3_bucket_name = s3_bucket.name
+        s3_object_name = s3_object.name
+    else:
+        # first, get the bucket and object.
+        (s3_bucket_name, s3_object_name) = get_bucket_and_object_from_s3_path(s3_path)
+        try:
+            # create (or get) the s3 bucket.
+            s3_bucket = s3.get_bucket(s3_bucket_name)
+        except:
+            print_error("Eeek! something happened!")
+            sys.exit(1)
+
+    # copy the key (this is currently the only way to update an object's
+    # metadata...
     s3_bucket.copy_key(
             s3_object_name, s3_bucket_name, s3_object_name,
             metadata={'md5-hexdigest': md5_hex_string}, preserve_acl=True)
@@ -154,7 +167,7 @@ def set_s3_md5_hex_digest(s3_path, md5_hex_string):
 
 def get_local_md5_hex_digest(local_path):
     if not os.path.isfile(local_path):
-        print "Error -- path is not a file: %s" % local_path
+        print_error("Error -- path is not a file: %s" % local_path)
         return None
     file_to_calc = open(local_path, 'rb')
     md5 = hashlib.md5()

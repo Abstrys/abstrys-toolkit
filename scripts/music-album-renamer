@@ -28,7 +28,8 @@ import os
 import sys
 import re
 
-TRACK_FILE_TYPES = ['.aac', '.alac', '.flac', '.m4a', '.m4b', '.mp3', '.ogg', '.wav']
+TRACK_FILE_TYPES = ['.aac', '.alac', '.flac', '.m4a', '.m4b', '.mp3', '.ogg',
+    '.wav', '.wma']
 
 def snakeify(in_str):
     """Snakeify the input text: convert spaces to underscores and lowercase
@@ -93,6 +94,8 @@ def process_file(path):
     """Rename a file"""
     # cut the filename from the path.
     (dpath, file_name) = os.path.split(path)
+    if dpath == '':
+        dpath = os.getcwd()
 
     new_file_name = rename_audio_file(file_name)
 
@@ -138,9 +141,9 @@ def process_dir(dir_name):
     os.chdir('..')
     new_dir_name = snakeify(dir_name)
     if new_dir_name != dir_name:
-        if os.path.exists(new_dir_name):
-            raise FileAlreadyExists
-        else:
+        # if the dir already exists, it doesn't matter, But if it *doesn't
+        # exist*, # then create it.
+        if not os.path.exists(new_dir_name):
             os.rename(dir_name, new_dir_name)
             print 'renamed dir: %s to %s' % (dir_name, new_dir_name)
 

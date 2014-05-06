@@ -7,10 +7,10 @@ script_names = [
     'scripts/fix-filenames',
     'scripts/music-album-renamer',
     'scripts/rompy',
-    'scripts/s3arc',
     'scripts/s3del',
     'scripts/s3lod',
     'scripts/s3pub',
+    'scripts/s3up',
     'scripts/snippetize',
     'scripts/srep', ]
 
@@ -54,7 +54,7 @@ Contact
 setup(name='abstrys-toolkit',
       description="""Useful command-line tools and scripts, designed for
       technical writing and publication.""",
-      version='1.05d',
+      version='1.05e',
       requires=['json', 'boto', 'PyYAML', 'httplib2'],
       packages=['abstrys'],
       scripts=script_names,

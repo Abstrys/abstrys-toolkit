@@ -281,7 +281,7 @@ Both public (P) and private (p) switches set. Defaulting to the safer option:
 
 def report_progress(bytes_transferred, total_bytes):
     """Report the progress of the transfer."""
-    progress_bar.show(bytes_transferred / 1000)
+    progress_bar.show(bytes_transferred / 1000.0)
 
 
 def change_object_privacy(s3_path):
@@ -384,35 +384,43 @@ def upload_file(file_path, s3_path):
     # create a new object.
     s3obj = bucket.get_key(object_name)
 
+    print "%s" % file_path
+    sys.stdout.write(" ->  S3://%s/%s" % (bucket_name, object_name))
+    confirm_upload = ('y' not in switches)
+
     if s3obj is None:
-        print "** creating new object:"
+        print " [create]"
         from boto.s3.key import Key
         s3obj = Key(bucket)
         s3obj.key = object_name
     else:
-        s3_md5 = get_s3_md5_hex_digest(s3obj)
+        print " [overwrite]"
+        s3_md5 = get_s3_md5_hex_digest(s3_object=s3obj)
         if s3_md5 == local_md5:
+            # In the case of 's', 'u', or 'y', files with MD5 equality are
+            # ignored by default.
             if not ('s' in switches or 'u' in switches or 'y' in switches):
-                print "The local file is identical to the version in S3, according to its MD5 hash."
-                if not confirm("Do you still want to overwrite the S3 version?"):
+                if not confirm("File is identical per MD5 digest. Still overwrite?"):
                     return None
+                else:
+                    confirm_upload = False
+            else:
+                sys.stdout.write("** Local file is identical per MD5 digest.  Ignoring %s\n   " % s3_path)
+                return None
 
-        print "** overwriting existing object:"
-
-    print " %s" % file_path
-    print "   -> S3://%s/%s" % (bucket_name, object_name)
-
-    if 'y' not in switches and not confirm("OK?"):
-        sys.exit(0)
+    if confirm_upload:
+        if not confirm("OK?"):
+            return None
 
     s3_path = 'S3://%s/%s' % (bucket_name, object_name)
     sys.stdout.write("** writing %s ...\n   " % s3_path)
     canned_acl = 'public-read' if 'P' in switches else 'private'
     total_bytes = os.path.getsize(file_path)
-    progress_bar.set_target(total_bytes / 1000)
-    granularity = min(total_bytes / 1000, 100)
-    s3obj.set_contents_from_filename(file_path, None, True, report_progress,
-            granularity, canned_acl)
+    progress_bar.set_target(total_bytes / 1000.0)
+    s3obj.set_metadata('md5-hexdigest', local_md5)
+    s3obj.set_contents_from_filename(file_path, headers=None, replace=True,
+            cb=report_progress, num_cb=-1, policy=canned_acl)
+    # also set the special md5 tag string (we can't rely on S3's ETag).
     print "\n** complete! Object has %s access." % canned_acl
 
     # no need to generate a URL for a non-public upload. Just return the S3
