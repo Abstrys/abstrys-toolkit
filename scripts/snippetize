@@ -34,7 +34,6 @@ snip_dir = 'snips'
 unsnip_dir = 'unsnips'
 snip_prefix = "~~|"
 snip_postfix = "|~~"
-unsnippetize = False
 files = []
 USAGE = """snippetize - cut a file into snippets (or remove snippet markers)
 
@@ -96,6 +95,7 @@ In Python, Ruby, or in a bash script, you would have::
 
 def unsnip_file(filename):
     """Write the file to the destination without any snip tags"""
+
     f = open(filename)
     of = open('%s/%s' % (unsnip_dir, filename), 'w+')
 
@@ -105,30 +105,26 @@ def unsnip_file(filename):
         else:
             of.write(line)
 
+
 def snip_file(filename):
     """Extract any snips from the given file into their own snip files."""
 
-    # Hold on...
-    if unsnippetize is True:
-        unsnip_file(filename)
-        return
-
-    # OK, good to go.
     cur_tag = None
     f = open(filename)
     of = None
+    subtract_leading_space = -1;
     for line in f.readlines():
-
         if cur_tag is None:
             # Not in a snip... yet.
             x = line.find(snip_prefix)
             if x > -1:
                 x += len(snip_prefix)
                 cur_tag = line[x:].strip()
-                print cur_tag
-                (f_base, f_ext) = os.path.splitext(filename)
+                (f_base, f_ext) = os.path.splitext(os.path.basename(filename))
                 of_path = "%s/%s-%s%s" % (snip_dir, f_base, cur_tag, f_ext)
+                print "   -> writing: %s" % of_path
                 of = open(of_path, 'w+')
+                subtract_leading_space = -1;
         else:
             # In a snip... but are we finished?
             x = line.find(snip_postfix)
@@ -138,9 +134,15 @@ def snip_file(filename):
                 cur_tag = None
             else:
                 # Nope; this line must be part of the snippet.
-                of.write(line)
+                if subtract_leading_space == -1:
+                    # detect how much leading space to remove from the snippet
+                    # based on the first line.
+                    leading = line.lstrip()
+                    subtract_leading_space = len(line) - len(leading)
+                of.write(line[subtract_leading_space:])
     # remember to close the file...
     f.close()
+
 
 def process_file_list(process, files):
     """Process (either snip or unsnip) a list of files."""
@@ -148,13 +150,18 @@ def process_file_list(process, files):
         filename = os.path.abspath(filename)
         if os.path.isdir(filename) is True:
             # if a directory, operate on all files within it.
-            process_file_list(os.listdir(filename))
+            file_list = [os.path.abspath("%s/%s" % (filename, x)) for x in os.listdir(filename)]
+            process_file_list(process, file_list)
         else:
+            print "** processing: %s" % filename
             process(filename)
 
 #
 # The script starts here
 #
+
+# default to snip.
+process = snip_file
 
 # check command-line args.
 for arg_num in range(1, len(sys.argv)):
@@ -164,7 +171,7 @@ for arg_num in range(1, len(sys.argv)):
             print USAGE
             sys.exit()
         elif arg == '-u' or (arg == '--unsnip'):
-            unsnippetize = True
+            process = unsnip_file
         else:
             print "Unrecognized command: '%s'." % arg
             print "Use 'snippetize -h' for help."
@@ -178,12 +185,8 @@ for arg_num in range(1, len(sys.argv)):
 if len(files) == 0:
     files.append(source_dir)
 
-# default to snip.
-process = snip_file
-
 # make sure output dirs are there!
-if unsnippetize:
-    process = unsnip_file
+if process == unsnip_file:
     if not os.path.exists(unsnip_dir):
         os.makedirs(unsnip_dir)
 else:
