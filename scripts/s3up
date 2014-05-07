@@ -2,8 +2,9 @@
 import sys
 import os
 import glob
-from abstrys.cmd_utils import ProgressBar
-from abstrys.cmd_utils import format_doc
+import hashlib
+from abstrys.aws_utils import *
+from abstrys.cmd_utils import *
 
 #
 # Some runtime variables...
@@ -15,67 +16,108 @@ files_to_upload = []
 s3 = None  # the AWS::S3 client
 s3_destination = ""
 switches = []
+switch_aliases = {
+    'archive': 'a',
+    'private': 'p',
+    'public': 'P',
+    'recurse': 'r',
+    'sync': 's',
+    'update': 'u',
+    'yes': 'y',
+    'file': 'f' }
+
 access_key_id = None
 secret_access_key = None
-progress_bar = ProgressBar(size=20, outputs=['bar', 'val:MB', 'pct'])
+progress_bar = ProgressBar(size=20, outputs=['bar', 'val:B', 'pct'])
 
 USAGE = """
-s3pub
-=====
+s3up
+====
 
-Publish files on Amazon S3. This script can also unpublish files (make them
+Upload files to Amazon S3. This script can also unpublish files (make them
 private), upload files and publish them in one step, or just upload files while
 keeping them private.
 
 Usage
 -----
 
-There are three forms of usage:
+There are four forms of usage:
 
-* The basic form, which publishes local files to S3::
+* The basic form, which uploads local files to S3::
 
-    {s3pub} [-y|r|u] <filespec> <s3_path>
+    {s3up} <options> <filespec1> [filespec2] [,,,] <s3_path>
 
-* The publish/unpublish form, which changes the access of files already on S3::
-
-    {s3pub} [-y|u] <s3_path>
+  Any number of files can be specified to upload. s3up will attempt to save
+  them all to the location specified in *s3_path*.
 
 * The argfile form, which takes a file of paths to publish to S3::
 
-    {s3pub} [-y|u|f] <argfile> [s3_path]
+    {s3up} <options> -f <argfile> [s3_path]
+
+  This form is essentially the same as the basic form, but the list of files is
+  not specified on the command-line. Useful when you're sending many discrete
+  files from different places on your file system.
+
+* The publish/unpublish form, which changes the access of files already on S3::
+
+    {s3up} -p|-P <s3_path>
+
+  This does no copying of data. Only the provided s3 path (which must exist
+  first) will be affected.
 
 Switches
 --------
 
 Switches, if provided, always precede the accompanying arguments.
 
-**-h**
+**-a, --archive**
+    Archives files. This sets the -s (sync) and -p (private) options
+    automatically.
+
+**-f, --file <filepath>**
+    Specifies a file to load the list of local paths to copy to S3.
+
+**-h, --help**
     Prints help. You can pipe the output of this command to rst2*.py to
     generate HTML, manpage, or other versions of this help.
 
-**-r**
+**-r, --recurse**
     Can be specified when you also specify local filespecs to publish or upload
-    to S3. If one of the filespecs is a directory, then {s3pub} will
+    to S3. If one of the filespecs is a directory, then {s3up} will
     recursively upload the directory's contents. If it contains subdirectories,
     their contents will also be uploaded. The directory structure will be
     preserved on S3.
 
-**-u**
-    When used with either local-file or argfile modes of operation, this flag
-    will cause the normal publish operation to be upload-only. The files will
-    remain private.
+**-s, --sync**
+    Causes {s3up} to sync files--files will not be overwritten unless they have
+    different md5 hash digest values. If a directory (or recurse) is specified,
+    then any files in S3 that do not exist in the local directory will be
+    removed from S3.
 
-    When used with the publish/unpublish form to work with files already on S3,
-    the flag will unpublish already-published files, reverting them to private.
+**-u, --update**
+    Causes #{s3up} to update files--files will not be overwritten unless they
+    have different md5 hash digest values. Files already on S3 that do not
+    exist in the local directory will still be retained on S3.
+
+**-P, --public**
+    When specified, gives the file public access (publishes it).
+
+**-p, --private**
+    When applied to a file already in S3, makes the file private. When
+    uploading files, this is the default.
 
 **-y**
-    The ``-y`` switch, when specified, tells #{s3pub} to automatically answer
+    The ``-y`` switch, when specified, tells #{s3up} to automatically answer
     'yes' to any queries (of the form "are you sure you want to do this?"). If
     ``-y`` is specified:
 
     * s3 buckets that don't exist will automatically be created if necessary.
 
-    * files will be published and/or overwritten without any confirmation.
+    * s3 objects with a different md5 digest than the local file will be
+      overwritten without any confirmation.
+
+    * local files will not be uploaded if the s3 version has the same md5
+      digest.
 
     With great power comes great responsibility. Play carefully.
 
@@ -89,7 +131,7 @@ Arguments
     files to be uploaded only, and not published.
 
 **s3_path**
-    A bucket or path on S3. When a path is provided to s3pub by itself, it is
+    A bucket or path on S3. When a path is provided to s3up by itself, it is
     assumed that the file already exists on S3 and should be made public. If
     the ``-u`` switch is provided, then the file is made unpublic (private),
     instead.
@@ -132,7 +174,7 @@ with any one of the following methods:
   ``--secret_key SECRETACCESSKEY``, providing your own AWS credentials in place
   of ACCESSKEYID and SECRETACCESSKEY.
 
-""".format(configfile=config_file, s3pub=__file__)
+""".format(configfile=config_file, s3up=__file__)
 
 
 def show_help():
@@ -161,29 +203,51 @@ def process_args(args):
     # arguments.
     i = 0
     while i < len(args) and args[i][0] == '-':
-        if args[i][1] == '-':
+        first_char = args[i][1]
+        if first_char == '-':
             # Oooh, an extended command!
-            ext_cmd = args[i][1:]
-            if ext_cmd == '-access_key':
+            ext_cmd = args[i][2:]
+            if ext_cmd == 'access_key':
                 i += 1 # read the next argument.
                 access_key_id = args[i]
-            elif ext_cmd == '-secret_key':
+            elif ext_cmd == 'secret_key':
                 i += 1 # read the next argument.
                 secret_access_key = args[i]
-            elif ext_cmd == '-aws_config':
+            elif ext_cmd == 'aws_config':
                 i += 1 # read the next argument.
                 config_file = args[i]
-        elif args[i][1] == 'h':
-            print USAGE
-            sys.exit()
-        else:
-            # store any other switches in the switches list.
-            for char in args[i][1:]:
+            elif ext_cmd == 'help':
+                print USAGE
+                sys.exit()
+            elif ext_cmd == 'archive':
+                switches += ['s', 'p']
+            elif ext_cmd in switch_aliases:
+                switches += switch_aliases[ext_cmd]
+        else: # not an extended command
+            arg_set = args[i][1:]
+            if 'h' in arg_set:
+                print 'h detected!'
+                sys.exit()
+            if 'a' in arg_set:
+                switches += ['s', 'p']
+            for char in arg_set:
                 switches += char
-        # increment the counter.
+
+        # increment the counteGr.
         i += 1
 
-    # done with switches, let's move on to the file and s3 path arguments.
+    # remove any duplicates
+    switches = list(set(switches))
+
+    # You can't specify both 'p' and 'P'... bad you!
+    if ('p' in switches) and ('P' in switches):
+        print """
+Both public (P) and private (p) switches set. Defaulting to the safer option:
+*private*.\n"""
+        switches.remove('P')
+
+    if 'a' in switches:
+        switches.remove('a')
 
     if i == len(args)-1:
         # If there is only one argument remaining, then it must either be an
@@ -215,77 +279,15 @@ def process_args(args):
         sys.exit()
 
 
-def authenticate_s3(access_key_id, secret_access_key, config_file):
-    """Authenticate with AWS and return an S3 object. Returns None if it failed
-    to get the S3 object."""
-    # Rules:
-    #
-    # 1. If the access_key_id and/or secret access key is specified, then use
-    #    its values in preference to all others.
-    #
-    # 2. If a file exists, use its values in preference to environment
-    #    variables.
-    #
-    # 3. If any credentials are still missing, look in the environment.
-
-    if not (access_key_id and secret_access_key):
-        # Command-line arguments didn't do the trick, so look for a file.
-        if os.path.exists(config_file):
-            # We're expecting a YAML-formatted file like this:
-            #
-            #     ---
-            #     access_key_id:     ACCESSKEYID
-            #     secret_access_key: SECRETACCESKEY
-            #
-            f = open(config_file, 'r')
-            config = yaml.safe_load(f)
-            f.close()
-            # Whatever command-line args *weren't* specified, fill them in with
-            # details from the file.
-            if not access_key_id:
-                access_key_id = config['access_key_id']
-            if not secret_access_key:
-                secret_access_key = config['secret_access_key']
-
-    if not (access_key_id and secret_access_key):
-        # There are still some credentials missing. Look in the environment.
-        if not access_key_id:
-            access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
-        if not secret_access_key:
-            secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
-
-    s3 = None
-    if access_key_id and secret_access_key:
-        s3 = boto.connect_s3(access_key_id, secret_access_key)
-    return s3
-
-
-def confirm(query):
-    """Confirm user input."""
-    answer = raw_input("%s (y/n): " % (query))
-    return answer.lower() == 'y'
-
-
-def report_progress(bytes_transferred, total_bytes):
+def report_progress(bytes_transferred):
     """Report the progress of the transfer."""
     progress_bar.show(bytes_transferred / 1000)
 
 
-def split_s3_path(s3_path):
-    """Get a bucket name and object path"""
-    # Split the s3 path after the *first* slash character. The bucket name
-    # can't have a slash in it; anything after the first slash is considered
-    # the S3 object name.
-    if '/' in s3_path:
-        return s3_path.split('/', 1)
-    else:
-        return (s3_path, None)
-
-
-def publish_or_unpublish_existing(s3_path):
+def change_object_privacy(s3_path):
     """Make the object at the given S3 path public (or private) and return its
-    URL. The mode is chosen by the presence of the command-lines switch
-    '-u'."""
+    URL. The mode is chosen by the presence of the command-lines switches '-P'
+    or '-p'."""
     bucket_name, object_name = split_s3_path(s3_path)
 
     bucket = None
@@ -297,7 +299,7 @@ def publish_or_unpublish_existing(s3_path):
     else:
         bucket = s3.get_bucket(bucket_name)
 
-    canned_acl_name = 'private' if 'u' in switches else 'public-read'
+    canned_acl_name = 'public-read' if 'P' in switches else 'private'
 
     # operate on all keys that match the "object" part of the path.
     public_urls = []
@@ -313,22 +315,56 @@ def publish_or_unpublish_existing(s3_path):
     return public_urls
 
 
-def publish_or_upload_file(file_path, s3_path):
-    """Publish a file (upload and make public) to an s3 location. Return the
-    URL."""
+def sync_file(local_path, s3_path):
+    """Sync a local file with S3"""
 
-    if '/' in s3_path:
-        bucket_name, object_name = split_s3_path(s3_path)
-    else:
-        bucket_name, object_name = s3_path, None
+    local_file_exists = False
+    s3_object_exists = False
+
+    # first, get the bucket and object.
+    (s3_bucket_name, s3_object_name) = split_s3_path(s3_path)
+
+    # if no object name was provided (appended to the bucket name after '/'),
+    # then use the local file name as the s3 object name.
+    if s3_object_name is None:
+        s3_object_name = os.path.basename(local_path)
+
+    # check to see if the file exists locally.
+    if os.path.exists(file_path):
+        local_file_exists = True
+
+    # check to see if the object exists on S3.
+    s3_bucket = None
+
+    try:
+        # create (or get) the s3 bucket.
+        s3_bucket = s3.create_bucket(s3_bucket_name)
+    except S3Error:
+        sys.exit(1)
+
+    # does the s3 object exist?
+    if s3_object in s3_bucket:
+        s3_object_exists = True
+        # check its hash
+        print s3_object.md5.hexdigest()
+
+
+def upload_file(file_path, s3_path):
+    """Upload a file to an s3 location. Return the URL if it is being made
+    public. Otherwise, return the S3 path."""
+
+    # first, get the bucket and object.
+    (bucket_name, object_name) = split_s3_path(s3_path)
 
     if not os.path.exists(file_path):
         print "** local file does not exist: %s" % file_path
         sys.exit(1)
 
+    # collect the local md5--we'll use it to see if the file on S3 is the same.
+    local_md5 = get_local_md5_hex_digest(file_path)
+
     # if no object name was provided (appended to the bucket name after '/'),
-    # then use the file name as the object name. We'll publish the file with
-    # the same name that it has on the local file system.
+    # then use the local file name as the s3 object name.
     if object_name is None:
         object_name = os.path.basename(file_path)
 
@@ -344,50 +380,68 @@ def publish_or_upload_file(file_path, s3_path):
     else:
         bucket = s3.get_bucket(bucket_name)
 
-    sys.stdout.write("uploading:" if 'u' in switches else "publishing:")
-    print " %s" % file_path
-    print "   -> S3://%s/%s" % (bucket_name, object_name)
-
-    if 'y' not in switches and not confirm("OK?"):
-        sys.exit(0)
-
     # does the object already exist? If so, we should update it. If not, we'll
     # create a new object.
     s3obj = bucket.get_key(object_name)
 
+    print "%s" % file_path
+    sys.stdout.write(" ->  S3://%s/%s" % (bucket_name, object_name))
+    confirm_upload = ('y' not in switches)
+
     if s3obj is None:
-        print "** creating new object"
+        print " [create]"
         from boto.s3.key import Key
         s3obj = Key(bucket)
         s3obj.key = object_name
     else:
-        print "** updating existing object"
+        print " [overwrite]"
+        s3_md5 = get_s3_md5_hex_digest(s3_object=s3obj)
+        if s3_md5 == local_md5:
+            # In the case of 's', 'u', or 'y', files with MD5 equality are
+            # ignored by default.
+            if not ('s' in switches or 'u' in switches or 'y' in switches):
+                if not confirm("File is identical per MD5 digest. Still overwrite?"):
+                    return None
+                else:
+                    confirm_upload = False
+            else:
+                sys.stdout.write("** Local file is identical per MD5 digest.  Ignoring %s\n   " % s3_path)
+                return None
 
-    sys.stdout.write("** writing S3://%s/%s ...\n   " % (bucket_name, object_name))
-    canned_acl = 'private' if 'u' in switches else 'public-read'
+    if confirm_upload:
+        if not confirm("OK?"):
+            return None
+
+    s3_path = 'S3://%s/%s' % (bucket_name, object_name)
+    sys.stdout.write("** writing %s ...\n   " % s3_path)
+    canned_acl = 'public-read' if 'P' in switches else 'private'
     total_bytes = os.path.getsize(file_path)
     progress_bar.set_target(total_bytes / 1000)
-    granularity = min(total_bytes / 1000, 100)
-    s3obj.set_contents_from_filename(file_path, None, True, report_progress,
-            granularity, canned_acl)
+    s3obj.set_metadata('md5-hexdigest', local_md5)
+    s3obj.set_contents_from_filename(file_path, headers=None, replace=True,
+            cb=report_progress, num_cb=-1, policy=canned_acl)
+    # also set the special md5 tag string (we can't rely on S3's ETag).
     print "\n** complete! Object has %s access." % canned_acl
 
-    # no need to generate a URL for a non-public upload
-    if 'u' in switches:
-        return None
+    # no need to generate a URL for a non-public upload. Just return the S3
+    # path.
+    if not 'P' in switches:
+        return s3_path
 
     public_url = s3obj.generate_url(0, query_auth=False)
     print "   public URL: %s" % public_url
     return public_url
 
-def publish_files(filespec, s3_path):
+
+def upload_files(filespec, s3_path):
+    """Upload files to S3 that match the provided filespec."""
     global switches
     for filepath in glob.glob(filespec):
         base_name = os.path.basename(filepath)
         if 'r' in switches and os.path.isdir(filepath):
-            publish_files('%s/*' % filepath, '%s/%s' % (s3_path, base_name))
+            upload_files('%s/*' % filepath, '%s/%s' % (s3_path, base_name))
         else:
-            publish_or_upload_file(filepath, '%s/%s' % (s3_path, base_name))
+            upload_file(filepath, '%s/%s' % (s3_path, base_name))
             print ""
 
 #
@@ -402,13 +456,6 @@ except ImportError, e:
     print "to install it first."
     sys.exit(1)
 
-try:
-    import yaml
-except ImportError, e:
-    print "pyyaml is not installed. Run 'pip install pyyaml' on the command-line"
-    print "to install it first."
-    sys.exit(1)
-
 if len(sys.argv) > 1:
     process_args(sys.argv[1:])
 else:
@@ -416,7 +463,7 @@ else:
     get_help()
     sys.exit()
 
-s3 = authenticate_s3(access_key_id, secret_access_key, config_file)
+s3 = get_s3(access_key_id, secret_access_key, config_file)
 if s3 is None:
     print "** could not make a connection to Amazon S3."
     get_help()
@@ -433,14 +480,14 @@ if 'f' in switches:
     if s3_destination is not "":
         # file is a list of filespecs.
         for filespec in f:
-            publish_files(filespec, s3_destination)
+            upload_files(filespec, s3_destination)
     else:
         # file is a list of filespec / destination lines.
         for argline in f:
             (filespec, s3dest) = split(argline)
             for filepath in glob.glob(filespec.strip()):
                 base_name = os.path.basename(filepath)
-                publish_or_upload_file(filepath, s3dest)
+                upload_file(filepath, s3dest)
                 print ""
 
 #
@@ -448,13 +495,13 @@ if 'f' in switches:
 #
 elif len(files_to_upload) > 0 and (s3_destination is not ""):
     for filespec in files_to_upload:
-        publish_files(filespec, s3_destination)
+        upload_files(filespec, s3_destination)
 
 #
 # s3 publish/unpublish mode
 #
 elif s3_destination is not "":
-    urls = publish_or_unpublish_existing(s3_destination)
+    urls = change_object_privacy(s3_destination)
     if urls == None:
         print "** no matching objects found"
         sys.exit()

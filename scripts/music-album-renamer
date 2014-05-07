@@ -28,20 +28,29 @@ import os
 import sys
 import re
 
-TRACK_FILE_TYPES = [ '.mp3', '.ogg', '.flac', '.wav', '.aac', '.alac' ]
+TRACK_FILE_TYPES = ['.aac', '.alac', '.flac', '.m4a', '.m4b', '.mp3', '.ogg',
+    '.wav', '.wma']
 
 def snakeify(in_str):
     """Snakeify the input text: convert spaces to underscores and lowercase
     everything. Return the result"""
     new_name = '_'.join(in_str.split()).lower()
 
-    # remove any quote
-    new_name = re.sub('[\'\">]', '', new_name)
+    # remove any quote characters
+    new_name = re.sub('[\?\!\@\#\$\%\^\*<\'\">]', '', new_name)
 
     # turn commas into underscores
-    new_name = new_name.replace(',', "_")
+    new_name = re.sub('[,:;]', '_', new_name)
 
-    # replace any '&' characters with the word 'and'
+    # remove any periods that are followed by an underscore.
+    new_name = new_name.replace('._', "_")
+
+    # remove any underscores that follow an open brace or parentheses.
+    new_name = new_name.replace('(_', "(")
+    new_name = new_name.replace('[_', "[")
+    new_name = new_name.replace('{_', "{")
+
+    # replace any '&' or '+' characters with the word 'and'
     new_name = re.sub('[&\+]', 'and', new_name)
 
     # reduce sequence of dashes to single underscores
@@ -80,10 +89,13 @@ def rename_audio_file(file_name):
 
     return new_file_name
 
+
 def process_file(path):
     """Rename a file"""
     # cut the filename from the path.
     (dpath, file_name) = os.path.split(path)
+    if dpath == '':
+        dpath = os.getcwd()
 
     new_file_name = rename_audio_file(file_name)
 
@@ -92,9 +104,22 @@ def process_file(path):
     if new_file_name == file_name:
         return True
 
-    # if the new_file_name already exists, raise an exception.
     if os.path.exists(new_file_name):
-        raise FileAlreadyExists
+        # if the new_file_name already exists, it could be the result of:
+        # * a case-insensitive file system
+        # * an actual naming conflict
+
+        # first, check to see if it's the same file.
+        if os.path.samefile(file_name, new_file_name):
+            # do two renames: one to a temp file, then the second to the
+            # desired filename.
+            tmp_file_name = new_file_name[::-1]
+            os.rename(file_name, tmp_file_name)
+            os.rename(tmp_file_name, new_file_name)
+        else:
+            # it's not the same file... hmm.
+            print "A file already exists with the name %s" % '/'.join([dpath,
+                new_file_name])
     else:
         os.rename(file_name, new_file_name)
         print 'renamed file: %s to %s' % (file_name, new_file_name)
@@ -116,9 +141,9 @@ def process_dir(dir_name):
     os.chdir('..')
     new_dir_name = snakeify(dir_name)
     if new_dir_name != dir_name:
-        if os.path.exists(new_dir_name):
-            raise FileAlreadyExists
-        else:
+        # if the dir already exists, it doesn't matter, But if it *doesn't
+        # exist*, # then create it.
+        if not os.path.exists(new_dir_name):
             os.rename(dir_name, new_dir_name)
             print 'renamed dir: %s to %s' % (dir_name, new_dir_name)
 
