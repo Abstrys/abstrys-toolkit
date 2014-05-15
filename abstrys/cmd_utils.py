@@ -162,7 +162,7 @@ class ProgressBar:
                 else:
                     output_parts[1] = ('(%d/%d) ' % (cur_value, target_value))
             if output_type == 'pct':
-                output_parts[2] = '%%' % (self.cur_value / self.target_value)
+                output_parts[2] = '%d%%' % ((self.cur_value * 100) / self.target_value)
 
         self.temp_message.erase()
         self.temp_message.show('%s%s%s' % (output_parts[0], output_parts[1],

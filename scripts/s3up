@@ -279,7 +279,7 @@ Both public (P) and private (p) switches set. Defaulting to the safer option:
         sys.exit()
 
 
-def report_progress(bytes_transferred):
+def report_progress(bytes_transferred, total_bytes):
     """Report the progress of the transfer."""
     progress_bar.show(bytes_transferred / 1000)
 

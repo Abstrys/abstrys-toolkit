@@ -5,15 +5,17 @@ Useful command-line tools and scripts. Designed for tech writers, usable by anyo
 
 Included in the toolkit are the following tools:
 
+- **camel2snake** - 
 - **[cleanjson][]** - cleans up messy json
 - **[clinks][]** - check href links in HTML files.
-- **fix_filenames** - modifies filenames on the system to snake_case
+- **fix-filenames** - modifies filenames on the system to snake_case
+- **music-album-renamer** - modifies filenames on the system to snake_case
 - **rompy** - Runs an arbitrary command when a tracked file's modification time changes
 - **[s3del][]** - Deletes Amazon S3 buckets or keys.
 - **[s3lod][]** - Lists Or Downloads the contents of Amazon S3 buckets
-- **[s3pub][]** - Publishes (upload and make public) any file from the local system to an Amazon S3 bucket
-- **[srep][]** - search and replace in files given a filespec (either file names or a glob, ex. *.xml)
+- **[s3up][]** - Publishes (upload and make public) any file from the local system to an Amazon S3 bucket
 - **[snippetize][]** - cut a file into snippets (or remove snippet markers)
+- **[srep][]** - search and replace in files given a filespec (either file names or a glob, ex. *.xml)
 
 ## Installing the toolkit
 
