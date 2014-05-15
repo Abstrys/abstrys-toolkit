@@ -27,36 +27,11 @@
 import os
 import sys
 import re
+from abstrys/txt_utils import snakeify
+
 
 TRACK_FILE_TYPES = ['.aac', '.alac', '.flac', '.m4a', '.m4b', '.mp3', '.ogg',
     '.wav', '.wma']
-
-def snakeify(in_str):
-    """Snakeify the input text: convert spaces to underscores and lowercase
-    everything. Return the result"""
-    new_name = '_'.join(in_str.split()).lower()
-
-    # remove any quote characters
-    new_name = re.sub('[\?\!\@\#\$\%\^\*<\'\">]', '', new_name)
-
-    # turn commas into underscores
-    new_name = re.sub('[,:;]', '_', new_name)
-
-    # remove any periods that are followed by an underscore.
-    new_name = new_name.replace('._', "_")
-
-    # remove any underscores that follow an open brace or parentheses.
-    new_name = new_name.replace('(_', "(")
-    new_name = new_name.replace('[_', "[")
-    new_name = new_name.replace('{_', "{")
-
-    # replace any '&' or '+' characters with the word 'and'
-    new_name = re.sub('[&\+]', 'and', new_name)
-
-    # reduce sequence of dashes to single underscores
-    new_name = re.sub('[\-_]+', '_', new_name)
-
-    return new_name
 
 
 def rename_audio_file(file_name):
