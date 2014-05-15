@@ -10,7 +10,6 @@ script_names = [
     'scripts/rompy',
     'scripts/s3del',
     'scripts/s3lod',
-    'scripts/s3pub',
     'scripts/s3up',
     'scripts/snippetize',
     'scripts/srep', ]
