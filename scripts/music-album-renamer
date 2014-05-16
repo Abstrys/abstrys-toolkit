@@ -27,7 +27,7 @@
 import os
 import sys
 import re
-from abstrys/txt_utils import snakeify
+from abstrys.txt_utils import snakeify
 
 
 TRACK_FILE_TYPES = ['.aac', '.alac', '.flac', '.m4a', '.m4b', '.mp3', '.ogg',
@@ -48,19 +48,12 @@ def rename_audio_file(file_name):
     # underscore to a dash.
     if '_' in new_file_name:
         (first_word, rest) = new_file_name.split('_', 1)
-        if first_word.isdigit():
-            new_file_name = '-'.join([first_word, rest])
-        else:
-            parts = new_file_name.split('_')
-            cur_part = 0
-            for part in parts:
-                if part.isdigit():
-                    break
-                else:
-                    cur_part += 1
-            if len(parts) > cur_part:
-                new_file_name = '_'.join(parts[cur_part+1:])
-                new_file_name = '-'.join([parts[cur_part], new_file_name])
+        try:
+            float(first_word)
+        except:
+            return new_file_name
+
+        new_file_name = '-'.join([first_word, rest])
 
     return new_file_name
 
