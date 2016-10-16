@@ -70,7 +70,7 @@ if len(sys.argv) > 1:
             if (arg == '-i' or arg == '--ignore'):
                 get_next_arg_for = 'i'
             if (arg == '-h' or arg == '-?' or arg == '--help'):
-                print USAGE
+                print(USAGE)
                 sys.exit()
             if (arg == '-r' or arg == '--recurse'):
                 recursive = true
@@ -84,12 +84,12 @@ for spec in filespecs:
     files_to_check += (glob.glob(spec))
 
 if len(files_to_check) < 1:
-    print "No HTML files found in current directory!"
+    print("No HTML files found in current directory!")
     sys.exit()
 
 total_files = len(files_to_check)
 cur_file_num = 0
-print "Checking %d files..." % total_files
+print("Checking %d files..." % total_files)
 
 links_to_check = []
 total_bad_links = 0
@@ -136,7 +136,7 @@ for filename in files_to_check:
     total_bad_links += len(bad_links)
 
     # there are bad links.. report them!
-    print ":\n  %d bad links found." % len(bad_links)
+    print(":\n  %d bad links found." % len(bad_links))
     out_file.write("%s:\n" % filename)
     for link in bad_links:
         out_file.write("  %s\n" % link)
@@ -144,7 +144,7 @@ for filename in files_to_check:
 
     f.close()
 
-print "Result: %d bad links found in %d files." % (total_bad_links, total_files)
-print "You can find the report of bad links in the file: %s" % output_filename
+print("Result: %d bad links found in %d files." % (total_bad_links, total_files))
+print("You can find the report of bad links in the file: %s" % output_filename)
 out_file.close()
 

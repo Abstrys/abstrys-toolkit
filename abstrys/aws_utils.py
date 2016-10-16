@@ -9,16 +9,16 @@ from cmd_utils import *
 
 try:
     import boto
-except ImportError, e:
-    print "boto is not installed. Run 'pip install boto' on the command-line"
-    print "to install it first."
+except(ImportError, e):
+    print("boto is not installed. Run 'pip install boto' on the command-line")
+    print("to install it first.")
     sys.exit(1)
 
 try:
     import yaml
-except ImportError, e:
-    print "pyyaml is not installed. Run 'pip install pyyaml' on the command-line"
-    print "to install it first."
+except(ImportError, e):
+    print("pyyaml is not installed. Run 'pip install pyyaml' on the command-line")
+    print("to install it first.")
     sys.exit(1)
 
 
@@ -175,6 +175,4 @@ def get_local_md5_hex_digest(local_path):
         md5.update(bit_o_file)
     file_to_calc.close()
     return md5.hexdigest()
-
-
 

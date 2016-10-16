@@ -9,14 +9,14 @@ replace_term = None
 
 # takes 3 args (see usage string for details).
 if len(sys.argv) < 4:
-    print """
+    print("""
 Usage: srep <searchterm> <replaceterm> <filespec> ...
 
 Notes:
   * All arguments are required.
   * searchterm and/or replaceterm can be regular expressions.
   * filespec can be a file name or glob. Multiple filespecs can be specified.
-"""
+""")
     sys.exit(1)
 
 # the first two user arguments are the search and replace terms.
@@ -31,8 +31,8 @@ expanded_list = []
 for filespec in file_list:
     expanded_list += glob.glob(filespec)
 
-print "This will replace all instances of '%s' with '%s' in %d files.\n" % (
-        search_term, replace_term, len(expanded_list))
+print("This will replace all instances of '%s' with '%s' in %d files.\n" % (
+        search_term, replace_term, len(expanded_list)))
 
 confirm = raw_input("Continue? (y/n): ")
 confirm = confirm.lower()
@@ -42,7 +42,7 @@ if confirm != 'y':
     print("Whew. That was close!\n")
     sys.exit()
 
-print ""
+print("")
 for filename in expanded_list:
     # read in the file contents
     sys.stdout.write("  %s" % filename)
@@ -56,14 +56,14 @@ for filename in expanded_list:
 
     if times > 0:
         end = 's' if times > 1 else ''
-        print " - %d replacement%s made." % (times, end)
+        print(" - %d replacement%s made." % (times, end))
         # write out the results.
         out_file = open(filename, "w+")
         out_file.write(contents)
         out_file.close()
     else:
-        print ""
+        print("")
 
-print "\nfinished!\n"
+print("\nfinished!\n")
 sys.exit(0)
 

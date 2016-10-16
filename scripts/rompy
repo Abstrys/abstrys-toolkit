@@ -69,8 +69,8 @@ def run_on_modify(run_what, on_what, with_args, at_rate_s):
             try:
                 subprocess.call(cmd, shell=True)
                 last_modify_time = modify_time
-            except OSError as e:
-                print 'OSError ({}) : {}'.format(e.errno, e.strerror)
+            except(OSError as e):
+                print('OSError ({}) : {}'.format(e.errno, e.strerror))
 
 # Check a file path to see if it has been updated.
 def is_updated(file_path, last_modify_time):
@@ -87,10 +87,10 @@ if __name__ == "__main__":
 
     if args < 3:
         if (args > 1) and (sys.argv[1].lower() == "help"):
-                print "\n    %s\n" % (run_on_modify.__doc__)
+                print("\n    %s\n" % (run_on_modify.__doc__))
         else:
-            print "You must specify a file to run, and on what."
-            print "Use \"help\" as the sole argument to get help."
+            print("You must specify a file to run, and on what.")
+            print("Use \"help\" as the sole argument to get help.")
             # too few!
 
         # either way...

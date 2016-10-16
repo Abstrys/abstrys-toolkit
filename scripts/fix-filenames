@@ -72,14 +72,14 @@ for arg in input_args[1:]:
         # check to make sure the destination doesn't exist yet.
         if (os.path.exists(final_path) and not os.path.samefile(fname,
             final_path)):
-            print "Name conflict: %s already exists!" % final_path
+            print("Name conflict: %s already exists!" % final_path)
             rename_anyway = raw_input("Continue with rename anyway? (y/n): ")
             if rename_anyway.lower() != 'y':
-                print "File %s will be unchanged." % fname
+                print("File %s will be unchanged." % fname)
                 continue
 
         # rename the file or directory
-        print "  %s" % fname
-        print "  --> %s\n" % final_path
+        print("  %s" % fname)
+        print("  --> %s\n" % final_path)
         os.rename(fname, final_path)
 

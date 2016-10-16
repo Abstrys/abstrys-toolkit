@@ -30,8 +30,9 @@ import re
 from abstrys.txt_utils import snakeify
 
 
-TRACK_FILE_TYPES = ['.aac', '.alac', '.flac', '.m4a', '.m4b', '.mp3', '.ogg',
-    '.wav', '.wma']
+TRACK_FILE_TYPES = [
+    '.aac', '.aiff', '.alac', '.flac', '.m4a', '.m4b', '.mp3', '.ogg', '.wav', '.wma'
+]
 
 
 def rename_audio_file(file_name):
@@ -86,11 +87,10 @@ def process_file(path):
             os.rename(tmp_file_name, new_file_name)
         else:
             # it's not the same file... hmm.
-            print "A file already exists with the name %s" % '/'.join([dpath,
-                new_file_name])
+            print("A file already exists with the name %s" % '/'.join([dpath, new_file_name]))
     else:
         os.rename(file_name, new_file_name)
-        print 'renamed file: %s to %s' % (file_name, new_file_name)
+        print('renamed file: %s to %s' % (file_name, new_file_name))
 
 
 def process_dir(dir_name):
@@ -113,7 +113,7 @@ def process_dir(dir_name):
         # exist*, # then create it.
         if not os.path.exists(new_dir_name):
             os.rename(dir_name, new_dir_name)
-            print 'renamed dir: %s to %s' % (dir_name, new_dir_name)
+            print('renamed dir: %s to %s' % (dir_name, new_dir_name))
 
 
 if __name__ == '__main__':

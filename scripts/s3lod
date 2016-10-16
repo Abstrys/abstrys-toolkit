@@ -74,11 +74,11 @@ with any one of the following methods:
 """.format(configfile=config_file, s3lod=__file__)
 
 def show_help():
-    print USAGE
+    print(USAGE)
     sys.exit()
 
 def get_help():
-    print "Use '%s -h' to get help." % __file__
+    print("Use '%s -h' to get help." % __file__)
     sys.exit()
 
 def process_args(args):
@@ -108,7 +108,7 @@ def process_args(args):
                 i += 1 # read the next argument.
                 config_file = args[i]
         elif args[i][1] == 'h':
-            print USAGE
+            print(USAGE)
             sys.exit()
         else:
             # store any other switches in the switches list.
@@ -180,33 +180,33 @@ def split_s3_path(s3_path):
         return (s3_path, None)
 
 def print_s3key_info(s3bucket, s3key):
-    print "%s/%s:" % (s3bucket.name, s3key.name)
+    print("%s/%s:" % (s3bucket.name, s3key.name))
     if s3key.content_disposition is not None:
-        print "  content-disposition: %s" % s3key.content_disposition
+        print("  content-disposition: %s" % s3key.content_disposition)
     if s3key.content_encoding is not None:
-        print "  content-encoding: %s" % s3key.content_encoding
+        print("  content-encoding: %s" % s3key.content_encoding)
     if s3key.content_language is not None:
-        print "  content-language: %s" % s3key.content_language
+        print("  content-language: %s" % s3key.content_language)
     if s3key.content_type is not None:
-        print "  content-type: %s" % s3key.content_type
+        print("  content-type: %s" % s3key.content_type)
     if s3key.encrypted is not None:
-        print "  encrypted: %s" % s3key.encrypted
+        print("  encrypted: %s" % s3key.encrypted)
     if s3key.etag is not None:
-        print "  etag: %s" % s3key.etag
+        print("  etag: %s" % s3key.etag)
     if s3key.last_modified is not None:
-        print "  last-modified: %s" % s3key.last_modified
+        print("  last-modified: %s" % s3key.last_modified)
     if s3key.md5 is not None:
-        print "  md5: %s" % s3key.md5
+        print("  md5: %s" % s3key.md5)
     if len(s3key.metadata) > 0:
-        print "  metadata: %s" % s3key.metadata
+        print("  metadata: %s" % s3key.metadata)
     if s3key.owner is not None:
-        print "  owner: %s" % s3key.owner
+        print("  owner: %s" % s3key.owner)
     if s3key.size is not None:
-        print "  size: %s" % s3key.size
+        print("  size: %s" % s3key.size)
     if s3key.storage_class is not None:
-        print "  storage-class: %s" % s3key.storage_class
+        print("  storage-class: %s" % s3key.storage_class)
     if s3key.version_id is not None:
-        print "  version-id: %s" % s3key.version_id
+        print("  version-id: %s" % s3key.version_id)
 
 #
 # THE SCRIPT
@@ -215,16 +215,16 @@ def print_s3key_info(s3bucket, s3key):
 # Check dependencies... these modules might not be installed on the system.
 try:
     import boto
-except ImportError, e:
-    print "boto is not installed. Run 'pip install boto' on the command-line"
-    print "to install it first."
+except(ImportError, e):
+    print("boto is not installed. Run 'pip install boto' on the command-line")
+    print("to install it first.")
     sys.exit(1)
 
 try:
     import yaml
-except ImportError, e:
-    print "pyyaml is not installed. Run 'pip install pyyaml' on the command-line"
-    print "to install it first."
+except(ImportError, e):
+    print("pyyaml is not installed. Run 'pip install pyyaml' on the command-line")
+    print("to install it first.")
     sys.exit(1)
 
 # It's OK if there aren't any args. We'll just return the bucket list.
@@ -233,7 +233,7 @@ if len(sys.argv) > 1:
 
 s3 = authenticate_s3(access_key_id, secret_access_key, config_file)
 if s3 is None:
-    print "Could not make a connection to Amazon S3."
+    print("Could not make a connection to Amazon S3.")
     get_help()
     sys.exit()
 
@@ -241,7 +241,7 @@ if s3 is None:
 if len(s3_paths_to_process) == 0:
     rs = s3.get_all_buckets()
     for key in rs:
-        print key.name
+        print(key.name)
     sys.exit(0)
 
 # If we have args (that is, we're here), they're either:
@@ -254,7 +254,7 @@ for s3_path in s3_paths_to_process:
 
     # we must at *least* have the bucket name.
     if s3.lookup(bucket_name) is None:
-        print "** no such bucket: %s" % bucket_name
+        print("** no such bucket: %s" % bucket_name)
         sys.exit(1)
 
     bucket = s3.get_bucket(bucket_name)
@@ -269,7 +269,7 @@ for s3_path in s3_paths_to_process:
             if 'i' in switches:
                 print_s3key_info(bucket, s3key)
             else:
-                print "%s/%s" % (bucket_name, s3key.name)
+                print("%s/%s" % (bucket_name, s3key.name))
     else:
         if 'i' in switches:
             print_s3key_info(bucket, s3key)

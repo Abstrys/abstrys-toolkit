@@ -59,7 +59,7 @@ def show_help():
     sys.exit()
 
 def get_help():
-    print "Use '%s -h' to get help." % __file__
+    print("Use '%s -h' to get help." % __file__)
     sys.exit()
 
 def process_args(args):
@@ -89,7 +89,7 @@ def process_args(args):
                 i += 1 # read the next argument.
                 config_file = args[i]
         elif args[i][1] == 'h':
-            print USAGE
+            print(USAGE)
             sys.exit()
         else:
             # store any other switches in the switches list.
@@ -164,32 +164,32 @@ def split_s3_path(s3_path):
 # Check dependencies... these modules might not be installed on the system.
 try:
     import boto
-except ImportError, e:
-    print "boto is not installed. Run 'pip install boto' on the command-line"
-    print "to install it first."
+except(ImportError, e):
+    print("boto is not installed. Run 'pip install boto' on the command-line")
+    print("to install it first.")
     sys.exit(1)
 
 try:
     import yaml
-except ImportError, e:
-    print "pyyaml is not installed. Run 'pip install pyyaml' on the command-line"
-    print "to install it first."
+except(ImportError, e):
+    print("pyyaml is not installed. Run 'pip install pyyaml' on the command-line")
+    print("to install it first.")
     sys.exit(1)
 
 if len(sys.argv) > 1:
     process_args(sys.argv[1:])
 else:
-    print "** you must supply at least one argument!"
+    print("** you must supply at least one argument!")
     get_help()
     sys.exit()
 
 if len(s3_paths_to_process) == 0:
-    print "** no buckets or objects supplied as input. Nothing to do..."
+    print("** no buckets or objects supplied as input. Nothing to do...")
     get_help();
 
 s3 = authenticate_s3(access_key_id, secret_access_key, config_file)
 if s3 is None:
-    print "** could not make a connection to Amazon S3."
+    print("** could not make a connection to Amazon S3.")
     get_help()
     sys.exit()
 
@@ -207,7 +207,7 @@ for s3_path in s3_paths_to_process:
 
     # we must at *least* have the bucket name.
     if s3.lookup(bucket_name) is None:
-        print "** no such bucket: %s" % bucket_name
+        print("** no such bucket: %s" % bucket_name)
         sys.exit(1)
 
     bucket = s3.get_bucket(bucket_name)
@@ -229,33 +229,33 @@ for s3_path in s3_paths_to_process:
             keys_to_delete.append((bucket, s3key))
 
 if len(keys_to_delete) > 0:
-    print "The following S3 objects will be deleted:"
+    print("The following S3 objects will be deleted:")
     for s3key in keys_to_delete:
-        print "  %s/%s" % (s3key[0].name, s3key[1].name)
-        #print "  %s" % s3key.name
+        print("  %s/%s" % (s3key[0].name, s3key[1].name))
+        #print("  %s" % s3key.name)
 
 if len(buckets_to_delete) > 0:
-    print "The following S3 buckets will be deleted:"
+    print("The following S3 buckets will be deleted:")
     for s3bucket in buckets_to_delete:
-        print "  %s" % s3bucket.name
+        print("  %s" % s3bucket.name)
 
 if 'y' not in switches and not util.confirm("Proceed with delete?"):
-    print "*Canceled Delete*\nWhew, that was close!"
+    print("*Canceled Delete*\nWhew, that was close!")
     sys.exit()
 
 # OK, we're deleting stuff now!
 
 # delete keys first
 if len(keys_to_delete) > 0:
-    print "Deleting keys:"
+    print("Deleting keys:")
     for s3key in keys_to_delete:
-        print "  %s/%s" % (s3key[0].name, s3key[1].name)
+        print("  %s/%s" % (s3key[0].name, s3key[1].name))
         s3key[1].delete()
 
 if len(buckets_to_delete) > 0:
-    print "Deleting buckets:"
+    print("Deleting buckets:")
     for s3bucket in buckets_to_delete:
-        print "  %s" % s3bucket.name
+        print("  %s" % s3bucket.name)
         s3bucket.delete()
 
-print "Finished!"
+print("Finished!")
