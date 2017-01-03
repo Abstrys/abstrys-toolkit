@@ -73,7 +73,7 @@ for arg in input_args[1:]:
         if (os.path.exists(final_path) and not os.path.samefile(fname,
             final_path)):
             print("Name conflict: %s already exists!" % final_path)
-            rename_anyway = raw_input("Continue with rename anyway? (y/n): ")
+            rename_anyway = input("Continue with rename anyway? (y/n): ")
             if rename_anyway.lower() != 'y':
                 print("File %s will be unchanged." % fname)
                 continue

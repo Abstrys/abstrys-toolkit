@@ -34,7 +34,7 @@ for filespec in file_list:
 print("This will replace all instances of '%s' with '%s' in %d files.\n" % (
         search_term, replace_term, len(expanded_list)))
 
-confirm = raw_input("Continue? (y/n): ")
+confirm = input("Continue? (y/n): ")
 confirm = confirm.lower()
 
 if confirm != 'y':
